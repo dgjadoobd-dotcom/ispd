@@ -1,0 +1,11 @@
+﻿full_name,phone,address,package_name,zone_name,area_name,connection_type,pppoe_username,pppoe_password,static_ip,email,monthly_charge,billing_day,connection_date,notes
+"Md. Rahim Uddin",01711234567,"House 12, Road 4, Mirpur-1, Dhaka","10 Mbps","Mirpur Zone",Mirpur-1,pppoe,rahim.uddin,Pass@1234,,rahim@gmail.com,500,1,2026-01-01,
+"Fatema Begum",01812345678,"Flat 3B, Green Tower, Uttara, Dhaka","20 Mbps","Uttara Zone",Uttara-4,pppoe,fatema.begum,Pass@5678,,,800,5,2026-01-15,"New connection"
+"Karim Hossain",01912345678,"Village: Kaliganj, Gazipur","5 Mbps","Gazipur Zone",Kaliganj,pppoe,karim.h,Kh@2024,,karim@yahoo.com,300,1,2026-02-01,
+"Nasrin Akter",01611234567,"Plot 7, Block C, Bashundhara R/A","50 Mbps",Bashundhara,Block-C,pppoe,nasrin.akter,Na@9999,192.168.1.100,nasrin@bd.com,1500,10,2026-02-10,"Static IP assigned"
+"Jahangir Alam",01511234567,"Holding 45, Ward 12, Narayanganj","10 Mbps",Narayanganj,Ward-12,pppoe,jahangir.a,Ja@2024,,,500,1,2026-03-01,
+"Sumaiya Khanam",01311234567,"House 8, Lane 3, Dhanmondi, Dhaka","30 Mbps",Dhanmondi,Dhanmondi,pppoe,sumaiya.k,Sk@2024,,sumaiya@gmail.com,1000,15,2026-03-05,
+"Rafiqul Islam",01411234567,"Mawna, Sreepur, Gazipur","5 Mbps","Gazipur Zone",Sreepur,pppoe,rafiqul.i,Ri@2024,,,300,1,2026-03-10,
+"Taslima Parvin",01711111111,"Sector 7, Uttara, Dhaka","20 Mbps","Uttara Zone",Uttara-7,pppoe,taslima.p,Tp@2024,,taslima@bd.com,800,1,2026-03-15,
+"Monir Hossain",01811111111,"Chowrasta, Comilla Sadar","10 Mbps","Comilla Zone",Sadar,pppoe,monir.h,Mh@2024,,,500,1,2026-04-01,
+"Roksana Begum",01911111111,"Agrabad, Chittagong","50 Mbps",Chittagong,Agrabad,pppoe,roksana.b,Rb@2024,10.0.0.50,roksana@ctg.com,1500,5,2026-04-05,"VIP customer"
