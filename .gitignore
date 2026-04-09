@@ -10,6 +10,8 @@
 /node_modules/
 /screensort/
 /storage/
+/storage/backups/
+/storage/logs/
 
 # One-time setup & test scripts
 check_users.php
