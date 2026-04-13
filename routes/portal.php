@@ -11,6 +11,7 @@ require_once BASE_PATH . '/app/Controllers/CustomerPortal/BillingController.php'
 require_once BASE_PATH . '/app/Controllers/CustomerPortal/SupportController.php';
 require_once BASE_PATH . '/app/Controllers/CustomerPortal/ProfileController.php';
 require_once BASE_PATH . '/app/Controllers/CustomerPortal/UsageController.php';
+require_once BASE_PATH . '/app/Controllers/CustomerPortal/AiChatController.php';
 
 Router::prefix('/portal', function() {
 
@@ -78,6 +79,9 @@ Router::prefix('/portal', function() {
         Router::post('/notifications/read', 'PortalProfileController@markNotificationRead');
         Router::get('/login-history', 'PortalProfileController@getLoginHistory');
     });
+
+    // ── AI Chat ───────────────────────────────────────────────────
+    Router::post('/ai/chat', 'AiChatController@chat');
 
     // ── API for Mobile App ─────────────────────────────────────────
     Router::prefix('/api', function() {
