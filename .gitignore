@@ -1,20 +1,36 @@
+# ── Environment ──────────────────────────────────────────────────
 .env
 .env.*
+!.env.example
+
+# ── Database ─────────────────────────────────────────────────────
 /database/*.sqlite
-/tmp/
-/public/assets/uploads/
-*.log
-.DS_Store
-/.idea/
-/.vscode/
+/database/*.sqlite-shm
+/database/*.sqlite-wal
+
+# ── Dependencies ─────────────────────────────────────────────────
 /vendor/
 /node_modules/
-/screensort/
-/storage/
-/storage/backups/
-/storage/logs/
 
-# One-time setup & test scripts
+# ── Uploads & Storage ────────────────────────────────────────────
+/public/assets/uploads/
+/storage/
+/tmp/
+*.log
+
+# ── IDE & OS ─────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+/.idea/
+/.vscode/
+*.swp
+*.swo
+
+# ── Cache ────────────────────────────────────────────────────────
+.phpunit.cache/
+/coverage/
+
+# ── One-time setup & test scripts ────────────────────────────────
 check_users.php
 copy_project.php
 create_config_table.php
@@ -26,6 +42,11 @@ public/test_db_connection.php
 public/test_packages.php
 public/test_profiles.php
 database/migrate_olt.php
+setup-dev.php
+test-dev-env.php
+test-dev-setup.php
+_setup.php
 
-# Sensitive notes
+# ── Sensitive notes ───────────────────────────────────────────────
 note.txt
+*.bak
