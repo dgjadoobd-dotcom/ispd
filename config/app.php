@@ -4,7 +4,29 @@ if (!defined('BASE_PATH')) define('BASE_PATH', dirname(__DIR__));
 
 // Load environment first
 $envFile = BASE_PATH . '/.env';
-$envData = file_exists($envFile) ? parse_ini_file($envFile) : [];
+$envData = [];
+if (file_exists($envFile)) {
+    foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#') continue;          // skip comments
+        if (!str_contains($line, '=')) continue;                  // skip invalid lines
+        [$key, $val] = explode('=', $line, 2);
+        $key = trim($key);
+        $val = trim($val);
+        // Strip surrounding quotes
+        if (strlen($val) >= 2 && (
+            ($val[0] === '"'  && $val[-1] === '"') ||
+            ($val[0] === "'"  && $val[-1] === "'")
+        )) {
+            $val = substr($val, 1, -1);
+        }
+        // Strip inline comments (# after value, outside quotes)
+        if (str_contains($val, ' #')) {
+            $val = trim(explode(' #', $val, 2)[0]);
+        }
+        $envData[$key] = $val;
+    }
+}
 
 define('APP_NAME', $envData['APP_NAME'] ?? 'Digital ISP ERP');
 define('APP_URL', $envData['APP_URL'] ?? 'http://localhost');
