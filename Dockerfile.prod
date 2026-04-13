@@ -1,0 +1,167 @@
+# Production Dockerfile for RADIUS Service
+# Multi-stage build for optimized production image
+
+# Stage 1: Build stage
+FROM php:8.1-cli-alpine AS builder
+
+# Install system dependencies
+RUN apk add --no-cache \
+    git \
+    curl \
+    libpng-dev \
+    libjpeg-turbo-dev \
+    freetype-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    autoconf \
+    g++ \
+    make \
+    linux-headers \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd \
+    && docker-php-ext-install pdo_mysql \
+    && docker-php-ext-install mysqli \
+    && docker-php-ext-install zip \
+    && docker-php-ext-install bcmath \
+    && docker-php-ext-install exif \
+    && docker-php-ext-install mbstring \
+    && docker-php-ext-install xml \
+    && docker-php-ext-install intl \
+    && docker-php-ext-install opcache \
+    && docker-php-ext-install sockets
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /app
+
+# Copy composer files
+COPY composer.json composer.lock* ./
+
+# Install dependencies (no dev dependencies for production)
+RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --optimize-autoloader
+
+# Copy application files
+COPY . .
+
+# Generate optimized autoloader
+RUN composer dump-autoload --optimize --no-dev --classmap-authoritative
+
+# Remove development files
+RUN rm -rf \
+    tests/ \
+    *.md \
+    docker/ \
+    .git/ \
+    .github/ \
+    .vscode/ \
+    .idea/ \
+    node_modules/ \
+    storage/logs/* \
+    storage/framework/cache/* \
+    storage/framework/sessions/* \
+    storage/framework/views/*
+
+# Stage 2: Production stage
+FROM php:8.1-fpm-alpine
+
+# Install production dependencies
+RUN apk add --no-cache \
+    libpng \
+    libjpeg-turbo \
+    freetype \
+    libzip \
+    nginx \
+    supervisor \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) gd \
+    && docker-php-ext-install pdo_mysql \
+    && docker-php-ext-install mysqli \
+    && docker-php-ext-install zip \
+    && docker-php-ext-install bcmath \
+    && docker-php-ext-install exif \
+    && docker-php-ext-install mbstring \
+    && docker-php-ext-install xml \
+    && docker-php-ext-install intl \
+    && docker-php-ext-install opcache \
+    && docker-php-ext-install sockets
+
+# Install additional PHP extensions for production
+RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del .build-deps
+
+# Configure PHP for production
+RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
+# Custom PHP configuration for production
+COPY docker/php/prod.ini $PHP_INI_DIR/conf.d/
+
+# Configure opcache for production
+RUN { \
+    echo 'opcache.enable=1'; \
+    echo 'opcache.memory_consumption=256'; \
+    echo 'opcache.interned_strings_buffer=16'; \
+    echo 'opcache.max_accelerated_files=10000'; \
+    echo 'opcache.revalidate_freq=2'; \
+    echo 'opcache.fast_shutdown=1'; \
+    echo 'opcache.enable_cli=1'; \
+    echo 'opcache.jit=1255'; \
+    echo 'opcache.jit_buffer_size=256M'; \
+} > $PHP_INI_DIR/conf.d/opcache.ini
+
+# Configure FPM for production
+RUN { \
+    echo 'pm = dynamic'; \
+    echo 'pm.max_children = 50'; \
+    echo 'pm.start_servers = 5'; \
+    echo 'pm.min_spare_servers = 5'; \
+    echo 'pm.max_spare_servers = 35'; \
+    echo 'pm.max_requests = 500'; \
+    echo 'pm.process_idle_timeout = 10s'; \
+    echo 'request_terminate_timeout = 300'; \
+    echo 'request_slowlog_timeout = 0'; \
+} > /usr/local/etc/php-fpm.d/zzz-custom.conf
+
+# Configure nginx
+COPY docker/nginx/nginx-prod.conf /etc/nginx/nginx.conf
+COPY docker/nginx/default-prod.conf /etc/nginx/conf.d/default.conf
+
+# Configure supervisor
+COPY docker/supervisor/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Create necessary directories
+RUN mkdir -p /var/log/nginx /var/log/php /var/log/supervisor \
+    && chown -R www-data:www-data /var/log/nginx /var/log/php /var/log/supervisor \
+    && chmod -R 755 /var/log/nginx /var/log/php /var/log/supervisor
+
+# Copy application from builder stage
+COPY --from=builder /app /var/www/html
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Create storage directories and set permissions
+RUN mkdir -p storage/framework/{cache,sessions,views} storage/logs \
+    && chown -R www-data:www-data storage \
+    && chmod -R 775 storage \
+    && chown -R www-data:www-data bootstrap/cache \
+    && chmod -R 775 bootstrap/cache
+
+# Create .env file placeholder (will be mounted from secrets)
+RUN touch .env \
+    && chown www-data:www-data .env \
+    && chmod 640 .env
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost/health || exit 1
+
+# Expose port
+EXPOSE 80
+
+# Start supervisor which manages both PHP-FPM and nginx
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

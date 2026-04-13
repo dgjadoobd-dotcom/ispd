@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'Digital ISP ERP' ?> — <?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
@@ -65,6 +66,14 @@
             z-index: 100; display: flex; flex-direction: column;
             transition: transform 0.3s ease; overflow-x: hidden;
         }
+        #sidebarBackdrop {
+            position: fixed; inset: 0;
+            background: rgba(2, 6, 23, 0.55);
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 98;
+        }
+        #sidebar.open + #sidebarBackdrop { opacity: 1; pointer-events: auto; }
         .sidebar-logo {
             display: flex; align-items: center; gap: 12px;
             padding: 16px 18px; border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -160,6 +169,43 @@
             margin-left: var(--sidebar-w); margin-top: var(--header-h);
             min-height: calc(100vh - var(--header-h));
             padding: 20px 24px; background: var(--bg);
+            overflow-x: auto;
+        }
+        #main > * { max-width: 100%; }
+        #main table { max-width: 100%; }
+        #main img, #main canvas, #main video { max-width: 100%; height: auto; }
+        #main [style*="display:grid"] { min-width: 0; }
+        .quick-action { display: inline-flex; }
+        .quick-action.quick-ticket { display: inline-flex; }
+        .quick-action.quick-online { display: inline-flex; }
+        .quick-action.quick-sms { display: inline-flex; }
+        .user-chevron { font-size: 10px; color: var(--text2); margin-left: 4px; }
+        body.sidebar-open { overflow: hidden; }
+
+        /* Common fixed grids used across modules */
+        .kpi-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .device-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .kanban { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .ocm-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .filter-grid-1 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .filter-grid-2 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+        /* Generic inline grid fallbacks used by several pages */
+        #main [style*="grid-template-columns:repeat(6"] { grid-template-columns: repeat(6, minmax(0, 1fr)) !important; }
+        #main [style*="grid-template-columns:repeat(5"] { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+        #main [style*="grid-template-columns:repeat(4"] { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+        #main [style*="grid-template-columns:repeat(3"] { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+        #main [style*="grid-template-columns:repeat(2"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        #main [style*="grid-template-columns:1fr 1fr 1fr"] { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+        #main [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+        #main [style*="grid-template-columns:2fr 1fr"] { grid-template-columns: 2fr 1fr !important; }
+        #main [style*="grid-template-columns:1fr 380px"] { grid-template-columns: 1fr 380px !important; }
+        #main [style*="grid-template-columns:220px minmax(0,1fr)"] { grid-template-columns: 220px minmax(0, 1fr) !important; }
+
+        #main .modal {
+            width: min(600px, calc(100vw - 20px));
+            max-height: calc(100vh - 20px);
         }
 
         /* ── CARDS ── */
@@ -313,11 +359,75 @@
         .fade-in-delay-4 { animation-delay: 0.20s; opacity: 0; }
 
         /* ── RESPONSIVE ── */
+        @media (max-width: 1200px) {
+            #header { padding: 0 14px; }
+            #main { padding: 18px; }
+        }
+
+        @media (max-width: 992px) {
+            .header-search { display: none; }
+            #main { padding: 14px; }
+            #main table { min-width: 680px; }
+            #main [style*="grid-template-columns:repeat(6"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            #main [style*="grid-template-columns:repeat(5"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            #main [style*="grid-template-columns:repeat(4"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            #main [style*="grid-template-columns:repeat(3"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            #main [style*="grid-template-columns:1fr 1fr 1fr"] { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            #main [style*="grid-template-columns:2fr 1fr"],
+            #main [style*="grid-template-columns:1fr 380px"],
+            #main [style*="grid-template-columns:220px minmax(0,1fr)"] { grid-template-columns: 1fr !important; }
+            .kpi-grid-4,
+            .kanban,
+            .ocm-stats,
+            .filter-grid-1,
+            .filter-grid-2,
+            .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+            .device-grid { grid-template-columns: 1fr !important; }
+            .page-title { font-size: 22px; }
+        }
+
         @media (max-width: 768px) {
+            :root { --header-h: 56px; }
             #sidebar { transform: translateX(-100%); }
             #sidebar.open { transform: translateX(0); }
+            #sidebarBackdrop { display: block; }
             #header { left: 0; }
-            #main { margin-left: 0; }
+            #main {
+                margin-left: 0;
+                padding: 12px;
+                min-height: calc(100vh - var(--header-h));
+            }
+            #header { padding: 0 10px; gap: 8px; }
+            .header-actions { gap: 6px; }
+            .quick-action.quick-online,
+            .quick-action.quick-sms { display: none; }
+            .user-info,
+            .user-chevron { display: none; }
+            .user-btn { padding: 4px 6px; gap: 6px; }
+            .icon-btn { width: 34px; height: 34px; }
+            .dropdown-menu {
+                position: fixed;
+                left: 10px;
+                right: 10px;
+                top: calc(var(--header-h) + 8px);
+                min-width: 0;
+            }
+            #notifMenu { width: auto !important; }
+            #main table { min-width: 620px; }
+            #main [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+            #main [style*="grid-template-columns:repeat(4"],
+            #main [style*="grid-template-columns:repeat(3"],
+            #main [style*="grid-template-columns:repeat(2"],
+            #main [style*="grid-template-columns:1fr 1fr"] { grid-template-columns: 1fr !important; }
+            .kpi-grid-4,
+            .device-grid,
+            .kanban,
+            .ocm-stats,
+            .filter-grid-1,
+            .filter-grid-2,
+            .form-row { grid-template-columns: 1fr !important; }
+            .page-header { margin-bottom: 18px; gap: 10px; }
+            .page-title { font-size: 20px; }
             .header-actions .btn { display: none; }
         }
 
@@ -455,6 +565,18 @@
             <a href="<?= base_url('network/radius/profiles') ?>" class="sub-item <?= $csp==='radius_profiles'?'active':'' ?>">
                 <i class="fa-solid fa-folder-tree"></i> RADIUS Profiles
             </a>
+            <a href="<?= base_url('network/radius/dashboard') ?>" class="sub-item <?= $csp==='radius_dashboard'?'active':'' ?>">
+                <i class="fa-solid fa-gauge"></i> RADIUS Dashboard
+            </a>
+            <a href="<?= base_url('network/radius/sessions') ?>" class="sub-item <?= $csp==='radius_sessions'?'active':'' ?>">
+                <i class="fa-solid fa-plug-circle-check"></i> RADIUS Sessions
+            </a>
+            <a href="<?= base_url('network/radius/analytics') ?>" class="sub-item <?= $csp==='radius_analytics'?'active':'' ?>">
+                <i class="fa-solid fa-chart-column"></i> RADIUS Analytics
+            </a>
+            <a href="<?= base_url('network/radius/audit') ?>" class="sub-item <?= $csp==='radius_audit'?'active':'' ?>">
+                <i class="fa-solid fa-shield-halved"></i> RADIUS Audit Log
+            </a>
             <a href="<?= base_url('network/mac-bindings') ?>" class="sub-item <?= $csp==='mac-bindings'?'active':'' ?>">
                 <i class="fa-solid fa-link"></i> MAC Bindings
             </a>
@@ -567,10 +689,11 @@
         </div>
     </div>
 </nav>
+<div id="sidebarBackdrop" onclick="closeSidebarMobile()"></div>
 
 <!-- ─────────────────── HEADER ─────────────────── -->
 <header id="header">
-    <button class="icon-btn" onclick="toggleSidebar()" title="Toggle sidebar">
+    <button id="sidebarToggle" class="icon-btn" onclick="toggleSidebar()" title="Toggle sidebar">
         <i class="fa-solid fa-bars"></i>
     </button>
 
@@ -582,14 +705,14 @@
     </div>
 
     <div class="header-actions">
-        <a href="<?= base_url('network/online-clients') ?>" class="icon-btn" title="Online Clients"
+        <a href="<?= base_url('network/online-clients') ?>" class="icon-btn quick-action quick-online" title="Online Clients"
            style="<?= $csp==='online-clients'?'border-color:var(--blue);color:var(--blue);':'' ?>">
             <i class="fa-solid fa-desktop"></i>
         </a>
-        <a href="<?= base_url('workorders/create') ?>" class="icon-btn" title="New Support Ticket">
+        <a href="<?= base_url('workorders/create') ?>" class="icon-btn quick-action quick-ticket" title="New Support Ticket">
             <i class="fa-solid fa-ticket"></i>
         </a>
-        <a href="<?= base_url('comms/bulk') ?>" class="icon-btn" title="Send Bulk SMS">
+        <a href="<?= base_url('comms/bulk') ?>" class="icon-btn quick-action quick-sms" title="Send Bulk SMS">
             <i class="fa-solid fa-paper-plane"></i>
         </a>
 
@@ -622,7 +745,7 @@
                     <div class="name"><?= htmlspecialchars($_SESSION['user_name'] ?? '') ?></div>
                     <div class="role"><?= htmlspecialchars($_SESSION['role_display'] ?? '') ?></div>
                 </div>
-                <i class="fa-solid fa-chevron-down" style="font-size:10px;color:var(--text2);margin-left:4px;"></i>
+                <i class="fa-solid fa-chevron-down user-chevron"></i>
             </div>
             <div class="dropdown-menu" id="userMenu">
                 <a href="#" class="dropdown-item"><i class="fa-solid fa-user"></i> Profile</a>
@@ -665,12 +788,22 @@ function toggleTheme() {
 if (localStorage.getItem('sidebarCollapsed') === '1') document.body.classList.add('sidebar-collapsed');
 
 function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
     if (window.innerWidth <= 768) {
-        document.getElementById('sidebar').classList.toggle('open');
+        const isOpen = sidebar.classList.toggle('open');
+        document.body.classList.toggle('sidebar-open', isOpen);
     } else {
+        sidebar.classList.remove('open');
+        document.body.classList.remove('sidebar-open');
         document.body.classList.toggle('sidebar-collapsed');
         localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed') ? '1' : '0');
     }
+}
+
+function closeSidebarMobile() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.remove('open');
+    document.body.classList.remove('sidebar-open');
 }
 
 function toggleNav(menuId, el) {
@@ -684,8 +817,12 @@ function toggleNav(menuId, el) {
 document.addEventListener('click', e => {
     const sidebar = document.getElementById('sidebar');
     if (window.innerWidth <= 768 && !sidebar.contains(e.target) && !e.target.closest('#sidebarToggle')) {
-        sidebar.classList.remove('open');
+        closeSidebarMobile();
     }
+});
+
+window.addEventListener('resize', () => {
+    if (window.innerWidth > 768) closeSidebarMobile();
 });
 
 // ── DROPDOWN ──

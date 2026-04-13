@@ -1,0 +1,314 @@
+version: '3.8'
+
+services:
+  # Load Balancer (HAProxy for production)
+  haproxy:
+    image: haproxy:2.8-alpine
+    container_name: radius-haproxy-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "1936:1936"  # HAProxy stats
+    volumes:
+      - ./docker/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      - ./docker/ssl:/etc/ssl/private
+    networks:
+      - radius-network-prod
+    depends_on:
+      - app1
+      - app2
+      - app3
+
+  # Application Servers (3 instances for load balancing)
+  app1:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: radius-app1-prod
+    restart: unless-stopped
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_URL=https://digitalisp.xyz
+      - DB_HOST=db
+      - DB_DATABASE=radius_production
+      - DB_USERNAME=radius_prod
+      - REDIS_HOST=redis
+      - SESSION_DRIVER=redis
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+    volumes:
+      - ./storage/logs:/var/www/html/storage/logs
+      - ./storage/framework/cache:/var/www/html/storage/framework/cache
+      - ./storage/framework/sessions:/var/www/html/storage/framework/sessions
+      - ./storage/framework/views:/var/www/html/storage/framework/views
+    networks:
+      - radius-network-prod
+    depends_on:
+      - db
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  app2:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: radius-app2-prod
+    restart: unless-stopped
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_URL=https://digitalisp.xyz
+      - DB_HOST=db
+      - DB_DATABASE=radius_production
+      - DB_USERNAME=radius_prod
+      - REDIS_HOST=redis
+      - SESSION_DRIVER=redis
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+    volumes:
+      - ./storage/logs:/var/www/html/storage/logs
+      - ./storage/framework/cache:/var/www/html/storage/framework/cache
+      - ./storage/framework/sessions:/var/www/html/storage/framework/sessions
+      - ./storage/framework/views:/var/www/html/storage/framework/views
+    networks:
+      - radius-network-prod
+    depends_on:
+      - db
+      - redis
+
+  app3:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: radius-app3-prod
+    restart: unless-stopped
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_URL=https://digitalisp.xyz
+      - DB_HOST=db
+      - DB_DATABASE=radius_production
+      - DB_USERNAME=radius_prod
+      - REDIS_HOST=redis
+      - SESSION_DRIVER=redis
+      - CACHE_DRIVER=redis
+      - QUEUE_CONNECTION=redis
+    volumes:
+      - ./storage/logs:/var/www/html/storage/logs
+      - ./storage/framework/cache:/var/www/html/storage/framework/cache
+      - ./storage/framework/sessions:/var/www/html/storage/framework/sessions
+      - ./storage/framework/views:/var/www/html/storage/framework/views
+    networks:
+      - radius-network-prod
+    depends_on:
+      - db
+      - redis
+
+  # Database (MySQL with replication)
+  db:
+    image: mysql:8.0
+    container_name: radius-db-prod
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: radius_production
+      MYSQL_USER: radius_prod
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-data-prod:/var/lib/mysql
+      - ./docker/mysql/init-prod.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./docker/mysql/backup:/backup
+    ports:
+      - "3306:3306"
+    networks:
+      - radius-network-prod
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=1G
+      --innodb-log-file-size=256M
+      --innodb-log-buffer-size=32M
+      --max-connections=500
+      --max_allowed_packet=256M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis Cluster (3 nodes for high availability)
+  redis-master:
+    image: redis:7-alpine
+    container_name: redis-master-prod
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes --appendfsync everysec
+    volumes:
+      - redis-master-data:/data
+    networks:
+      - radius-network-prod
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis-replica1:
+    image: redis:7-alpine
+    container_name: redis-replica1-prod
+    restart: unless-stopped
+    command: redis-server --replicaof redis-master 6379 --masterauth ${REDIS_PASSWORD} --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-replica1-data:/data
+    networks:
+      - radius-network-prod
+    depends_on:
+      - redis-master
+
+  redis-replica2:
+    image: redis:7-alpine
+    container_name: redis-replica2-prod
+    restart: unless-stopped
+    command: redis-server --replicaof redis-master 6379 --masterauth ${REDIS_PASSWORD} --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis-replica2-data:/data
+    networks:
+      - radius-network-prod
+    depends_on:
+      - redis-master
+
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-prod
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - radius-network-prod
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-prod
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-clock-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - radius-network-prod
+    depends_on:
+      - prometheus
+
+  # Logging (ELK Stack)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.10.0
+    container_name: elasticsearch-prod
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - radius-network-prod
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.10.0
+    container_name: logstash-prod
+    volumes:
+      - ./docker/logstash/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+      - ./docker/logstash/patterns:/usr/share/logstash/patterns
+    networks:
+      - radius-network-prod
+    depends_on:
+      - elasticsearch
+    command: logstash -f /usr/share/logstash/pipeline/logstash.conf
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.10.0
+    container_name: kibana-prod
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    networks:
+      - radius-network-prod
+    depends_on:
+      - elasticsearch
+
+  # Backup Service
+  backup:
+    image: alpine:latest
+    container_name: backup-prod
+    restart: unless-stopped
+    volumes:
+      - backup-data:/backup
+      - ./backup:/backup/local
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - radius-network-prod
+    command: >
+      sh -c "
+      while true; do
+        # Daily backup at 2 AM
+        if [ $(date +%H) -eq 2 ]; then
+          echo 'Starting backup...'
+          # Backup database
+          mysqldump -h db -u root -p${DB_ROOT_PASSWORD} radius_production > /backup/db-$(date +%Y%m%d).sql
+          # Backup Redis
+          redis-cli -a ${REDIS_PASSWORD} --rdb /backup/redis-$(date +%Y%m%d).rdb
+          # Sync to S3 (if configured)
+          if [ -n "${AWS_ACCESS_KEY_ID}" ]; then
+            aws s3 sync /backup s3://${S3_BACKUP_BUCKET}/$(date +%Y/%m/%d)/
+          fi
+        fi
+        sleep 3600
+      done"
+
+volumes:
+  mysql-data-prod:
+  redis-master-data:
+  redis-replica1-data:
+  redis-replica2-data:
+  prometheus-data:
+  grafana-data:
+  elasticsearch-data:
+  backup-data:
+
+networks:
+  radius-network-prod:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16

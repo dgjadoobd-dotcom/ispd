@@ -85,9 +85,9 @@ public_html/ispd/        ← app files (app/, config/, database/, etc.)
 public_html/             ← contents of the public/ folder
 ```
 
-Or if you have a subdomain (e.g. `billing.yourdomain.com`):
+Or if you have a subdomain (e.g. `billing.fcnchbd.xyz`):
 ```
-billing.yourdomain.com/  ← contents of public/ folder
+billing.fcnchbd.xyz/  ← contents of public/ folder
 ispd/                    ← app files (one level above public_html)
 ```
 
@@ -109,7 +109,7 @@ In cPanel → MySQL Databases:
 
 ### Step 4 — Run Installer
 ```
-https://billing.yourdomain.com/install.php
+https://billing.fcnchbd.xyz/install.php
 ```
 - Choose **MySQL** as database type
 - Enter the database credentials from Step 3

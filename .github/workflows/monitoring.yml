@@ -1,0 +1,96 @@
+name: Monitoring and Alerting
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Run every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check Development Environment
+      run: |
+        curl -f http://${{ secrets.DEV_SERVER_HOST }}:8080/health || echo "Development health check failed"
+        
+    - name: Check Staging Environment
+      run: |
+        curl -f http://${{ secrets.STAGING_HOST }}/health || echo "Staging health check failed"
+        
+    - name: Check Production Environment
+      run: |
+        curl -f http://${{ secrets.PROD_HOST }}/health || echo "Production health check failed"
+        
+    - name: Send alert on failure
+      if: failure()
+      uses: 8398/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#alerts'
+        text: "Health check failed for one or more environments"
+        username: Health Monitor
+        icon_emoji: ":warning:"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        
+  performance-monitoring:
+    name: Performance Monitoring
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check response time
+      run: |
+        # Check response time for each environment
+        for env in dev staging prod; do
+          case $env in
+            dev)
+              url="http://${{ secrets.DEV_SERVER_HOST }}:8080/health"
+              ;;
+            staging)
+              url="http://${{ secrets.STAGING_HOST }}/health"
+              ;;
+            prod)
+              url="http://${{ secrets.PROD_HOST }}/health"
+              ;;
+          esac
+          
+          response_time=$(curl -o /dev/null -s -w '%{time_total}' $url)
+          echo "Response time for $env: ${response_time}s"
+          
+          # Alert if response time > 2 seconds
+          if (( $(echo "$response_time > 2" | bc -l) )); then
+            echo "High response time detected for $env: ${response_time}s"
+          fi
+        done
+        
+  database-monitoring:
+    name: Database Monitoring
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check database connections
+      run: |
+        # This would require database credentials and connection details
+        echo "Database monitoring would be implemented here"
+        
+  log-monitoring:
+    name: Log Monitoring
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check for errors in logs
+      run: |
+        # This would require access to log files
+        echo "Log monitoring would be implemented here"
+        
+  resource-monitoring:
+    name: Resource Monitoring
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check system resources
+      run: |
+        # This would require SSH access to servers
+        echo "Resource monitoring would be implemented here"

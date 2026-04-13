@@ -69,6 +69,11 @@ Router::prefix('/network', function() {
     Router::post('/radius/profiles/store', 'NetworkController@storeRadiusProfile', ['AuthMiddleware']);
     Router::post('/radius/profiles/delete/{name}', 'NetworkController@deleteRadiusProfile', ['AuthMiddleware']);
     Router::post('/radius/profiles/sync-from-mikrotik', 'NetworkController@syncProfilesFromMikrotik', ['AuthMiddleware']);
+    Router::get('/radius/dashboard', 'NetworkController@radiusDashboard', ['AuthMiddleware']);
+    Router::get('/radius/sessions', 'NetworkController@radiusSessions', ['AuthMiddleware']);
+    Router::post('/radius/sessions/terminate/{session_id}', 'NetworkController@terminateRadiusSession', ['AuthMiddleware']);
+    Router::get('/radius/analytics', 'NetworkController@radiusAnalytics', ['AuthMiddleware']);
+    Router::get('/radius/audit', 'NetworkController@radiusAudit', ['AuthMiddleware']);
     
     // PPPoE Users Management
     Router::get('/pppoe-users', 'NetworkController@pppoeUsers', ['AuthMiddleware']);
@@ -121,6 +126,7 @@ Router::prefix('/gpon', function() {
     Router::get('/api/snmp/test/{id}', 'GponController@snmpTest', ['AuthMiddleware']);
     Router::post('/api/snmp/sync/{id}', 'GponController@syncOnus', ['AuthMiddleware']);
     Router::get('/api/olts/{id}/onus', 'GponController@getOltOnuList', ['AuthMiddleware']);
+    Router::get('/api/olts/{id}/onus/live', 'GponController@getLiveOnuList', ['AuthMiddleware']);
     Router::post('/api/onus/update/{id}', 'GponController@updateOnuApi', ['AuthMiddleware']);
     Router::post('/api/onus/delete/{id}', 'GponController@deleteOnuApi', ['AuthMiddleware']);
     Router::get('/splitters', 'GponController@splitters', ['AuthMiddleware']);

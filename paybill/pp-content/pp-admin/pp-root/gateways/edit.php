@@ -56,14 +56,22 @@
                     }
 
                     if($gatewayInfo['gateway_type'] == 'automation'){
-                        $extraFields[] = [
-                            'name'  => 'mobile_number',
-                            'label' => 'Mobile Number',
-                            'type'  => 'text',
-                            'value' => '',       
-                            'required' => true,
-                            'placeholder' => 'Enter mobile number'
-                        ];
+                        if ($slug === 'bkash-personal') {
+                            $extraFields[] = [
+                                'name'  => 'mobile_number',
+                                'label' => 'Mobile Numbers',
+                                'type'  => 'multi_mobile',
+                            ];
+                        } else {
+                            $extraFields[] = [
+                                'name'  => 'mobile_number',
+                                'label' => 'Mobile Number',
+                                'type'  => 'text',
+                                'value' => '',       
+                                'required' => true,
+                                'placeholder' => 'Enter mobile number'
+                            ];
+                        }
                         $extraFields[] = [
                             'name'  => 'pending_payment',
                             'label' => 'Allow Pending Payment?',
@@ -469,6 +477,32 @@
                                                         </div>";
                                                 }
                                                 break;
+
+                                            case 'multi_mobile':
+                                                $numbers = [];
+                                                if (!empty($value)) {
+                                                    $decoded = json_decode($value, true);
+                                                    $numbers = is_array($decoded) ? $decoded : [$value];
+                                                }
+                                                if (empty($numbers)) $numbers = [''];
+
+                                                echo '<div id="mobile-number-list">';
+                                                foreach ($numbers as $num) {
+                                                    echo '<div class="input-group mb-2 mobile-number-row">
+                                                            <input type="text" class="form-control" name="mobile_number[]"
+                                                                   value="' . htmlspecialchars($num) . '"
+                                                                   placeholder="01XXXXXXXXX"
+                                                                   pattern="^01[0-9]{9}$"
+                                                                   title="11-digit Bangladeshi number starting with 01">
+                                                            <button type="button" class="btn btn-outline-danger remove-number-btn">
+                                                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
+                                                            </button>
+                                                          </div>';
+                                                }
+                                                echo '</div>';
+                                                echo '<button type="button" id="add-mobile-number" class="btn btn-secondary btn-sm mt-1">+ Add Number</button>';
+                                                echo '<div id="mobile-number-error" class="text-danger mt-1" style="display:none">At least one valid mobile number is required.</div>';
+                                                break;
                                         }
                                         ?>
                                     </div>
@@ -485,6 +519,66 @@
                         </div>
                     </div>
                 </div>
+
+                <?php if ($slug === 'bkash-personal'): ?>
+<script>
+(function () {
+    var list = document.getElementById('mobile-number-list');
+    var addBtn = document.getElementById('add-mobile-number');
+    var MAX_NUMBERS = 20;
+
+    function updateAddBtn() {
+        if (addBtn) {
+            addBtn.disabled = list.querySelectorAll('.mobile-number-row').length >= MAX_NUMBERS;
+        }
+    }
+
+    if (addBtn) {
+        addBtn.addEventListener('click', function () {
+            var rows = list.querySelectorAll('.mobile-number-row');
+            if (rows.length >= MAX_NUMBERS) return;
+            var row = rows[0].cloneNode(true);
+            row.querySelector('input').value = '';
+            list.appendChild(row);
+            updateAddBtn();
+        });
+    }
+
+    if (list) {
+        list.addEventListener('click', function (e) {
+            var btn = e.target.closest('.remove-number-btn');
+            if (btn) {
+                var rows = list.querySelectorAll('.mobile-number-row');
+                if (rows.length > 1) {
+                    btn.closest('.mobile-number-row').remove();
+                    updateAddBtn();
+                }
+            }
+        });
+    }
+
+    var form = document.querySelector('form.form-submit, form[class*="form-submit"]');
+    if (!form) {
+        // fallback: find the form containing the mobile-number-list
+        if (list) form = list.closest('form');
+    }
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            var inputs = document.querySelectorAll('[name="mobile_number[]"]');
+            var pattern = /^01[0-9]{9}$/;
+            var valid = Array.from(inputs).filter(function (i) { return pattern.test(i.value.trim()); });
+            var errorDiv = document.getElementById('mobile-number-error');
+            if (valid.length === 0) {
+                e.preventDefault();
+                if (errorDiv) errorDiv.style.display = 'block';
+            } else {
+                if (errorDiv) errorDiv.style.display = 'none';
+            }
+        });
+    }
+})();
+</script>
+                <?php endif; ?>
 
                 <div class="card mt-3">
                     <div class="card-header">

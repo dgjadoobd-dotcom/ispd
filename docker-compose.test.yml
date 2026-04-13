@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  test-mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: radius_test
+      MYSQL_USER: radius
+      MYSQL_PASSWORD: radius123
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-network
+
+  test-redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    networks:
+      - test-network
+
+  test-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      DB_HOST: test-mysql
+      DB_DATABASE: radius_test
+      DB_USERNAME: radius
+      DB_PASSWORD: radius123
+      REDIS_HOST: test-redis
+      APP_ENV: testing
+    depends_on:
+      test-mysql:
+        condition: service_healthy
+      test-redis:
+        condition: service_started
+    networks:
+      - test-network
+    command: >
+      sh -c "
+        while ! mysqladmin ping -h test-mysql --silent; do
+          sleep 1
+        done
+        && php artisan migrate --force
+        && php artisan test
+      "
+
+networks:
+  test-network:
+    driver: bridge

@@ -1,4 +1,5 @@
 .env
+.env.*
 /database/*.sqlite
 /tmp/
 /public/assets/uploads/

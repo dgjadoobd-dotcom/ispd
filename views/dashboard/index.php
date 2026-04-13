@@ -1,6 +1,6 @@
 <?php // views/dashboard/index.php ?>
 <style>
-.kpi-grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+.kpi-grid-4 { display:grid; gap:16px; margin-bottom:24px; }
 .dash-card { display:flex; flex-direction:column; color:#fff; padding:12px 16px; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.1); transition:transform 0.2s; position:relative; overflow:hidden; }
 .dash-card:hover { transform:translateY(-2px); }
 .dash-card .top { display:flex; align-items:flex-start; gap:12px; }
@@ -48,7 +48,7 @@
 </div>
 
 <!-- KPI Grid Row 1: Clients -->
-<div class="kpi-grid-4 fade-in fade-in-delay-1">
+<div class="kpi-grid-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 fade-in fade-in-delay-1">
     <div class="dash-card bg-blue">
         <div class="top"><div class="icon"><i class="fa-solid fa-users"></i></div><div><div class="title">Total Clients</div><div class="value"><?= $stats['total'] ?? 0 ?></div></div></div>
         <div class="footer">All clients at present</div>
@@ -68,7 +68,7 @@
 </div>
 
 <!-- KPI Grid Row 2: Billing -->
-<div class="kpi-grid-4 fade-in fade-in-delay-2">
+<div class="kpi-grid-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 fade-in fade-in-delay-2">
     <div class="dash-card bg-green">
         <div class="top"><div class="icon"><i class="fa-solid fa-money-bill-wave"></i></div><div><div class="title">Today Collection</div><div class="value">৳<?= number_format($stats['todayCol'] ?? 0, 0) ?></div></div></div>
         <div class="footer">Total collected today</div>
@@ -88,7 +88,7 @@
 </div>
 
 <!-- KPI Grid Row 3: Network -->
-<div class="kpi-grid-4 fade-in fade-in-delay-3">
+<div class="kpi-grid-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 fade-in fade-in-delay-3">
     <div class="dash-card bg-teal">
         <div class="top"><div class="icon"><i class="fa-solid fa-chart-simple"></i></div><div><div class="title">Online Clients</div><div class="value" id="liveSessionCount"><?= $stats['active'] ?? 0 ?></div></div></div>
         <div class="footer">MikroTik live sessions</div>
@@ -108,7 +108,7 @@
 </div>
 
 <!-- KPI Grid Row 4: GPON & Work Orders -->
-<div class="kpi-grid-4 fade-in fade-in-delay-3">
+<div class="kpi-grid-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 fade-in fade-in-delay-3">
     <div class="dash-card bg-blue">
         <div class="top"><div class="icon"><i class="fa-solid fa-tower-broadcast"></i></div><div><div class="title">ONUs Online</div><div class="value"><?= $onuStats['online'] ?? 0 ?></div></div></div>
         <div class="footer">Online ONU devices</div>

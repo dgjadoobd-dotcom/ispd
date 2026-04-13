@@ -82,6 +82,80 @@
             background-color: <?php echo $data['options']['primary_color'];?>;
             border-color: <?php echo $data['options']['primary_color'];?>;
         }
+
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .footer-branding {
+            word-break: break-word;
+            padding: 0 12px;
+        }
+        .btn-group {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .btn-group .btn {
+            min-width: 0;
+            white-space: normal;
+        }
+        .btns-group {
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        #gateways-details .fw-semibold {
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                background-attachment: scroll !important;
+            }
+            .container {
+                max-width: 100%;
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            .card-body {
+                padding: 14px;
+            }
+            .company-logo {
+                width: 64px;
+                height: 64px;
+                margin-top: 10px;
+            }
+            .company-name {
+                margin-top: 10px;
+                margin-bottom: 10px;
+                font-size: 18px;
+            }
+            .btn-group {
+                gap: 6px;
+            }
+            .btn-group .btn {
+                flex: 1 1 calc(50% - 6px);
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+            .btn-group .btn span {
+                display: none !important;
+            }
+            .btns-group {
+                gap: 6px !important;
+            }
+            .btns-group .btns svg,
+            .btns-group > div > svg {
+                width: 30px !important;
+                height: 30px !important;
+                padding: 5px !important;
+            }
+            #gateways-mfs .col-6,
+            #gateways-bank .col-6,
+            #gateways-global .col-6,
+            #gateways-support .col-6 {
+                width: 50%;
+            }
+        }
     </style>
 
     <?php

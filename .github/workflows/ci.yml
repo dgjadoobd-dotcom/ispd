@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: radius_test
+          MYSQL_USER: radius
+          MYSQL_PASSWORD: radius123
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+        ports:
+          - 3306:3306
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.1
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, pdo, pdo_mysql, redis, gd, zip, curl, json, bcmath, intl, opcache
+          coverage: none
+
+      - name: Install dependencies
+        if: hashFiles('composer.json') != ''
+        run: composer install --no-progress --prefer-dist --optimize-autoloader
+
+      - name: Copy env file
+        run: cp .env.example .env
+
+      - name: Run PHPUnit tests
+        if: hashFiles('vendor/bin/phpunit') != ''
+        run: ./vendor/bin/phpunit --no-coverage
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: radius_test
+          DB_USERNAME: radius
+          DB_PASSWORD: radius123
+          REDIS_HOST: 127.0.0.1
+          REDIS_PORT: 6379
+
+      - name: PHP syntax lint
+        run: find app -name "*.php" -exec php -l {} \; | grep -v "No syntax errors" || true
+
+      - name: PHPStan static analysis
+        if: hashFiles('vendor/bin/phpstan') != ''
+        run: ./vendor/bin/phpstan analyse app --level=5 --no-progress

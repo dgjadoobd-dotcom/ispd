@@ -1340,4 +1340,260 @@ class NetworkController {
         $_SESSION['success'] = "Synced $synced profiles from MikroTik.";
         redirect(base_url('network/radius/profiles'));
     }
+
+    // ── RADIUS Dashboard ──────────────────────────────────────────────────────
+
+    public function radiusDashboard(): void {
+        $pageTitle      = 'RADIUS Dashboard';
+        $currentPage    = 'network';
+        $currentSubPage = 'radius_dashboard';
+
+        $stats = ['total_active' => 0, 'total_bytes_in' => 0, 'total_bytes_out' => 0, 'unique_nas_count' => 0];
+        $activeSessions   = [];
+        $unresolvedAlerts = [];
+        $totalUsers       = 0;
+        $onlineUsers      = [];
+
+        try {
+            $pdo = Database::getInstance('radius')->getConnection();
+
+            // Total registered users
+            $totalUsers = (int) $pdo->query("SELECT COUNT(DISTINCT username) FROM radcheck WHERE attribute='Cleartext-Password'")->fetchColumn();
+
+            // Active sessions from radacct (acctstoptime IS NULL)
+            $acctRows = $pdo->query(
+                "SELECT username, nasipaddress AS nas_ip, framedipaddress AS framed_ip,
+                        acctstarttime AS start_time,
+                        acctinputoctets AS bytes_in, acctoutputoctets AS bytes_out,
+                        TIMESTAMPDIFF(SECOND, acctstarttime, NOW()) AS duration_seconds
+                 FROM radacct WHERE acctstoptime IS NULL ORDER BY acctstarttime DESC LIMIT 100"
+            )->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!empty($acctRows)) {
+                $activeSessions = $acctRows;
+                $stats['total_active']     = count($acctRows);
+                $stats['total_bytes_in']   = array_sum(array_column($acctRows, 'bytes_in'));
+                $stats['total_bytes_out']  = array_sum(array_column($acctRows, 'bytes_out'));
+                $stats['unique_nas_count'] = count(array_unique(array_column($acctRows, 'nas_ip')));
+            } else {
+                // radacct empty — try MikroTik live sessions as fallback
+                require_once BASE_PATH . '/app/Services/MikroTikService.php';
+                $nasDevices = $this->db->fetchAll("SELECT * FROM nas_devices WHERE is_active = 1 LIMIT 5");
+                foreach ($nasDevices as $nas) {
+                    try {
+                        $mt = new MikroTikService([
+                            'ip' => $nas['ip_address'], 'port' => $nas['api_port'],
+                            'username' => $nas['username'], 'password' => $nas['password'], 'timeout' => 5
+                        ]);
+                        if ($mt->connect()) {
+                            $sessions = $mt->getActiveSessions();
+                            foreach ($sessions as $s) {
+                                $activeSessions[] = [
+                                    'username'         => $s['name'] ?? '—',
+                                    'nas_ip'           => $nas['ip_address'],
+                                    'framed_ip'        => $s['address'] ?? '—',
+                                    'start_time'       => $s['uptime'] ?? '—',
+                                    'bytes_in'         => (int)($s['bytes-in'] ?? 0),
+                                    'bytes_out'        => (int)($s['bytes-out'] ?? 0),
+                                    'duration_seconds' => 0,
+                                ];
+                            }
+                            $mt->disconnect();
+                        }
+                    } catch (Exception $e) { /* skip unreachable NAS */ }
+                }
+                $stats['total_active']     = count($activeSessions);
+                $stats['total_bytes_in']   = array_sum(array_column($activeSessions, 'bytes_in'));
+                $stats['total_bytes_out']  = array_sum(array_column($activeSessions, 'bytes_out'));
+                $stats['unique_nas_count'] = count(array_unique(array_column($activeSessions, 'nas_ip')));
+            }
+
+            // Unresolved alerts
+            require_once BASE_PATH . '/app/Services/RadiusAlertService.php';
+            $alertService     = new RadiusAlertService($pdo);
+            $unresolvedAlerts = $alertService->getUnresolvedAlerts();
+
+        } catch (Exception $e) {
+            $_SESSION['error'] = 'RADIUS database error: ' . $e->getMessage();
+        }
+
+        $viewFile = BASE_PATH . '/views/radius/dashboard.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    // ── RADIUS Sessions ───────────────────────────────────────────────────────
+
+    public function radiusSessions(): void {
+        $pageTitle      = 'RADIUS Sessions';
+        $currentPage    = 'network';
+        $currentSubPage = 'radius_sessions';
+
+        $activeSessions = [];
+        $stats = ['total_active' => 0, 'total_bytes_in' => 0, 'total_bytes_out' => 0, 'unique_nas_count' => 0];
+
+        try {
+            $pdo = Database::getInstance('radius')->getConnection();
+
+            $where  = ['acctstoptime IS NULL'];
+            $params = [];
+            if (!empty($_GET['username'])) {
+                $where[]  = 'username LIKE :username';
+                $params[':username'] = '%' . $_GET['username'] . '%';
+            }
+            if (!empty($_GET['nas_ip'])) {
+                $where[]  = 'nasipaddress = :nas_ip';
+                $params[':nas_ip'] = $_GET['nas_ip'];
+            }
+
+            $sql = "SELECT username, nasipaddress AS nas_ip, framedipaddress AS framed_ip,
+                           acctstarttime AS start_time, acctuniqueid AS session_id,
+                           acctinputoctets AS bytes_in, acctoutputoctets AS bytes_out,
+                           TIMESTAMPDIFF(SECOND, acctstarttime, NOW()) AS duration_seconds
+                    FROM radacct WHERE " . implode(' AND ', $where) . "
+                    ORDER BY acctstarttime DESC LIMIT 200";
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $activeSessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $stats['total_active']     = count($activeSessions);
+            $stats['total_bytes_in']   = (int) array_sum(array_column($activeSessions, 'bytes_in'));
+            $stats['total_bytes_out']  = (int) array_sum(array_column($activeSessions, 'bytes_out'));
+            $stats['unique_nas_count'] = count(array_unique(array_column($activeSessions, 'nas_ip')));
+
+        } catch (Exception $e) {
+            $_SESSION['error'] = 'RADIUS database error: ' . $e->getMessage();
+        }
+
+        $viewFile = BASE_PATH . '/views/radius/sessions.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    public function terminateRadiusSession(string $sessionId): void {
+        require_once BASE_PATH . '/app/Services/RadiusSessionService.php';
+        require_once BASE_PATH . '/app/Services/RadiusSessionTimeoutService.php';
+
+        try {
+            $pdo            = Database::getInstance('radius')->getConnection();
+            $sessionService = new RadiusSessionService($pdo);
+            $timeoutService = new RadiusSessionTimeoutService($pdo, $sessionService);
+            $timeoutService->terminateSession($sessionId, 'Admin-Reset');
+            $_SESSION['success'] = "Session terminated.";
+        } catch (Exception $e) {
+            $_SESSION['error'] = 'Failed to terminate session: ' . $e->getMessage();
+        }
+
+        redirect(base_url('network/radius/sessions'));
+    }
+
+    // ── RADIUS Analytics ──────────────────────────────────────────────────────
+
+    public function radiusAnalytics(): void {
+        $pageTitle      = 'RADIUS Analytics';
+        $currentPage    = 'network';
+        $currentSubPage = 'radius_analytics';
+
+        $period       = in_array($_GET['period'] ?? '', ['today','week','month']) ? $_GET['period'] : 'today';
+        $topUsers     = [];
+        $hourlyCounts = array_map(fn($h) => ['hour' => $h, 'session_count' => 0], range(0, 23));
+        $dailySummary = [];
+        $totalUsers   = 0;
+
+        try {
+            $pdo   = Database::getInstance('radius')->getConnection();
+            $today = date('Y-m-d');
+
+            // Total registered users
+            $totalUsers = (int) $pdo->query("SELECT COUNT(DISTINCT username) FROM radcheck WHERE attribute='Cleartext-Password'")->fetchColumn();
+
+            // Top users from radacct (if data exists), else from radcheck
+            $dateExpr = match ($period) {
+                'week'  => "DATE(acctstarttime) >= DATE(NOW() - INTERVAL 7 DAY)",
+                'month' => "DATE(acctstarttime) >= DATE(NOW() - INTERVAL 30 DAY)",
+                default => "DATE(acctstarttime) = CURDATE()",
+            };
+
+            $acctCount = (int) $pdo->query("SELECT COUNT(*) FROM radacct")->fetchColumn();
+
+            if ($acctCount > 0) {
+                $topUsers = $pdo->query(
+                    "SELECT username,
+                            COALESCE(SUM(acctinputoctets),0)  AS total_bytes_in,
+                            COALESCE(SUM(acctoutputoctets),0) AS total_bytes_out,
+                            COALESCE(SUM(acctinputoctets+acctoutputoctets),0) AS total_bytes,
+                            COUNT(*) AS session_count
+                     FROM radacct WHERE {$dateExpr}
+                     GROUP BY username ORDER BY total_bytes DESC LIMIT 10"
+                )->fetchAll(PDO::FETCH_ASSOC);
+
+                // Hourly session counts from radacct
+                $hourlyRaw = $pdo->query(
+                    "SELECT HOUR(acctstarttime) AS hour, COUNT(*) AS session_count
+                     FROM radacct WHERE DATE(acctstarttime) = '{$today}'
+                     GROUP BY HOUR(acctstarttime)"
+                )->fetchAll(PDO::FETCH_ASSOC);
+                $byHour = [];
+                foreach ($hourlyRaw as $r) { $byHour[(int)$r['hour']] = (int)$r['session_count']; }
+                $hourlyCounts = array_map(fn($h) => ['hour' => $h, 'session_count' => $byHour[$h] ?? 0], range(0, 23));
+
+                // Daily summary from radacct
+                $dailySummary = $pdo->query(
+                    "SELECT DATE(acctstarttime) AS date,
+                            SUM(acctinputoctets)  AS total_bytes_in,
+                            SUM(acctoutputoctets) AS total_bytes_out,
+                            COUNT(*) AS total_sessions,
+                            COUNT(DISTINCT username) AS unique_users
+                     FROM radacct
+                     WHERE DATE(acctstarttime) >= DATE(NOW() - INTERVAL 6 DAY)
+                     GROUP BY DATE(acctstarttime) ORDER BY date ASC"
+                )->fetchAll(PDO::FETCH_ASSOC);
+            } else {
+                // No radacct data — show top users by registration (radcheck)
+                $topUsers = $pdo->query(
+                    "SELECT c.username, g.groupname AS profile,
+                            0 AS total_bytes_in, 0 AS total_bytes_out, 0 AS total_bytes, 0 AS session_count
+                     FROM radcheck c LEFT JOIN radusergroup g ON g.username = c.username
+                     WHERE c.attribute = 'Cleartext-Password'
+                     ORDER BY c.username ASC LIMIT 10"
+                )->fetchAll(PDO::FETCH_ASSOC);
+            }
+
+        } catch (Exception $e) {
+            $_SESSION['error'] = 'RADIUS database error: ' . $e->getMessage();
+        }
+
+        $viewFile = BASE_PATH . '/views/radius/analytics.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    // ── RADIUS Audit Log ──────────────────────────────────────────────────────
+
+    public function radiusAudit(): void {
+        $pageTitle      = 'RADIUS Audit Log';
+        $currentPage    = 'network';
+        $currentSubPage = 'radius_audit';
+
+        require_once BASE_PATH . '/app/Services/RadiusAuditService.php';
+
+        $logs = [];
+
+        try {
+            $pdo          = Database::getInstance('radius')->getConnection();
+            $auditService = new RadiusAuditService($pdo);
+
+            $filters = [];
+            if (!empty($_GET['admin_user']))      $filters['admin_user']      = $_GET['admin_user'];
+            if (!empty($_GET['action']))          $filters['action']          = $_GET['action'];
+            if (!empty($_GET['target_username'])) $filters['target_username'] = $_GET['target_username'];
+            if (!empty($_GET['date_from']))       $filters['date_from']       = $_GET['date_from'];
+            if (!empty($_GET['date_to']))         $filters['date_to']         = $_GET['date_to'];
+
+            $logs = $auditService->getLogs($filters, 100);
+        } catch (Exception $e) {
+            $_SESSION['error'] = 'RADIUS database not available: ' . $e->getMessage();
+        }
+
+        $viewFile = BASE_PATH . '/views/radius/audit.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
 }

@@ -44,6 +44,33 @@
             --tblr-btn-disabled-color: <?php echo $data['options']['text_color'];?>;
             --tblr-btn-box-shadow: <?php echo $data['options']['text_color'];?>;
         }
+        .container.container-tight {
+            max-width: 760px;
+            width: 100%;
+        }
+        .card {
+            overflow: hidden;
+        }
+        .card-body {
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 768px) {
+            .container.container-tight {
+                max-width: 100%;
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            .card-body.text-center.py-3.p-sm-4 {
+                padding: 14px !important;
+            }
+            .card-body svg.img {
+                height: 140px;
+            }
+            #payButton {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body style="background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">

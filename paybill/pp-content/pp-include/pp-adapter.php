@@ -242,8 +242,11 @@ aa021689e729dc2302b47e9bdc7d1a9f8b72f95f01530da35bf3b848b188d5b1
     $piprapay_favicon= 'https://piprapay.com/assets/images/favicon.png';
     $piprapay_logo_light = 'https://cdn.piprapay.com/media/logo.png';
 
-    $directory = (pp_site_url('fulldomain') == 'http://localhost') ? 'piprapay-panel/' : '';
-    $site_url = pp_site_url('fulldomain').'/'.$directory;
+    // Detect the base path from the request URI (e.g. /ispd/paybill/)
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
+    $basePath = rtrim(str_replace('index.php', '', $scriptName), '/');
+    $site_url = pp_site_url('fulldomain') . $basePath . '/';
 
     if(isset($_GET['logout'])){
         logoutCookie();
@@ -7765,6 +7768,15 @@ aa021689e729dc2302b47e9bdc7d1a9f8b72f95f01530da35bf3b848b188d5b1
                                         'gateway_logo',
                                         'primary_color','text_color','btn_color','btn_text_color'
                                     ])) {
+                                        continue;
+                                    }
+
+                                    // Special case: mobile_number[] array for bkash-personal
+                                    if ($key === 'mobile_number' && is_array($value)) {
+                                        $filtered = array_values(array_filter($value, fn($n) => trim($n) !== ''));
+                                        $filtered = array_slice($filtered, 0, 20);
+                                        $value = json_encode($filtered);
+                                        $configData[$key] = $value;
                                         continue;
                                     }
 

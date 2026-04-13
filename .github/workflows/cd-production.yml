@@ -1,0 +1,69 @@
+name: CD - Production
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*.*.*'
+
+env:
+  IMAGE_NAME: ${{ secrets.DOCKER_REGISTRY }}/${{ secrets.DOCKER_IMAGE_NAME }}
+
+jobs:
+  deploy-production:
+    name: Build & Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production  # requires manual approval in GitHub environment settings
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Determine image tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=prod-${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/radius-service
+            export IMAGE_TAG=${{ steps.tag.outputs.tag }}
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker system prune -f
+
+      - name: Health check
+        run: |
+          sleep 30
+          curl -f https://${{ secrets.PROD_HOST }}/health || exit 1

@@ -32,14 +32,14 @@ php setup.php
 ###### MySQL
 ```sql
 -- Create database in phpMyAdmin or MySQL client
-CREATE DATABASE digital-isp.sqlite CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE digital-isp.sqlite;
+CREATE DATABASE digital_isp.sqlite CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE digital_isp.sqlite;
 SOURCE c:/xampp/htdocs/ispd/database/schema.sql;
 ```
 
 ###### SQLite (recommended for local testing)
 - Ensure the `database/` folder is writable.
-- Set `DB_CONNECTION=sqlite` and `DB_DATABASE=database/digital-isp.sqlite` in `.env`.
+- Set `DB_CONNECTION=sqlite` and `DB_DATABASE=database/digital_isp.sqlite` in `.env`.
 - The app will auto-create the schema from `database/sqlite_schema.sql`.
 
 ##### 2. Environment Config

@@ -200,6 +200,64 @@
                 font-size: 20px;
             }
         }
+
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .footer-branding {
+            word-break: break-word;
+            padding: 0 12px;
+        }
+        .btns-group {
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .payment-instructions li {
+            align-items: flex-start;
+        }
+        .payment-instructions li p,
+        .payment-instructions li .dynamic-value {
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                background-attachment: scroll !important;
+            }
+            .container {
+                max-width: 100%;
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            .card-body {
+                padding: 14px;
+            }
+            .company-logo {
+                height: 44px;
+                margin-top: 10px;
+                margin-bottom: 10px;
+            }
+            .btns-group {
+                gap: 6px !important;
+            }
+            .btns-group > div > svg {
+                width: 30px !important;
+                height: 30px !important;
+                padding: 5px !important;
+            }
+            .payment-instructions {
+                padding-left: 12px;
+                padding-right: 12px;
+            }
+            .payment-instructions li {
+                gap: 8px;
+                padding: 12px 0;
+            }
+            #payButton {
+                width: 100%;
+            }
+        }
     </style>
 
     <?php

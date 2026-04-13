@@ -1,0 +1,214 @@
+version: '3.8'
+
+services:
+  # PHP Application (Staging)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: radius-app-staging
+    restart: unless-stopped
+    ports:
+      - "8082:80"
+    volumes:
+      - ./:/var/www/html
+      - ./docker/php/php.ini:/usr/local/etc/php/php.ini
+      - ./docker/php/opcache.ini:/usr/local/etc/php/conf.d/opcache.ini
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      - APP_ENV=staging
+      - APP_DEBUG=false
+      - DB_HOST=mysql
+      - DB_DATABASE=radius_staging
+      - DB_USERNAME=radius_staging
+      - DB_PASSWORD=staging_radius_password_2024
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=staging_redis_password_2024
+    networks:
+      - radius-network-staging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MySQL Database (Staging)
+  mysql:
+    image: mysql:8.0
+    container_name: radius-mysql-staging
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: staging_root_password_2024
+      MYSQL_DATABASE: radius_staging
+      MYSQL_USER: radius_staging
+      MYSQL_PASSWORD: staging_radius_password_2024
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data-staging:/var/lib/mysql
+      - ./docker/mysql/init-staging.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./docker/mysql/backup:/backup
+    networks:
+      - radius-network-staging
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pstaging_root_password_2024"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --max-connections=200
+      --innodb-buffer-pool-size=256M
+
+  # Redis for caching and sessions (Staging)
+  redis:
+    image: redis:7-alpine
+    container_name: radius-redis-staging
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-data-staging:/data
+    networks:
+      - radius-network-staging
+    command: >
+      redis-server
+      --requirepass staging_redis_password_2024
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --appendfsync everysec
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "staging_redis_password_2024", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx for reverse proxy (Staging)
+  nginx:
+    image: nginx:alpine
+    container_name: radius-nginx-staging
+    restart: unless-stopped
+    ports:
+      - "8083:80"
+      - "8443:443"
+    volumes:
+      - ./docker/nginx/nginx-staging.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/conf.d-staging:/etc/nginx/conf.d
+      - ./docker/nginx/ssl-staging:/etc/nginx/ssl
+      - ./:/var/www/html
+    depends_on:
+      - app
+    networks:
+      - radius-network-staging
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PHPMyAdmin for database management (Staging)
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: radius-phpmyadmin-staging
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: staging_root_password_2024
+    ports:
+      - "8084:80"
+    networks:
+      - radius-network-staging
+    depends_on:
+      - mysql
+
+  # Monitoring (Staging)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: radius-prometheus-staging
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/monitoring/prometheus-staging.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data-staging:/prometheus
+    networks:
+      - radius-network-staging
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: radius-grafana-staging
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data-staging:/var/lib/grafana
+      - ./docker/monitoring/grafana-staging.ini:/etc/grafana/grafana.ini
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=staging_grafana_password
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    networks:
+      - radius-network-staging
+    depends_on:
+      - prometheus
+
+  # Log aggregation (Staging)
+  loki:
+    image: grafana/loki:latest
+    container_name: radius-loki-staging
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki-data-staging:/loki
+      - ./docker/monitoring/loki-staging.yml:/etc/loki/local-config.yaml
+    networks:
+      - radius-network-staging
+    command: -config.file=/etc/loki/local-config.yaml
+
+  # Backup service (Staging)
+  backup:
+    image: alpine:latest
+    container_name: radius-backup-staging
+    restart: unless-stopped
+    volumes:
+      - mysql-data-staging:/source
+      - backup-data-staging:/backup
+    networks:
+      - radius-network-staging
+    command: >
+      sh -c "
+      echo 'Backup service started' &&
+      while true; do
+        sleep 86400 &&
+        echo 'Creating daily backup...' &&
+        tar -czf /backup/backup-$$(date +%Y%m%d-%H%M%S).tar.gz /source
+      done"
+
+volumes:
+  mysql-data-staging:
+  redis-data-staging:
+  prometheus-data-staging:
+  grafana-data-staging:
+  loki-data-staging:
+  backup-data-staging:
+
+networks:
+  radius-network-staging:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

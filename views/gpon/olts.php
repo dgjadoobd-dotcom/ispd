@@ -78,6 +78,7 @@
                             <button class="btn btn-ghost btn-sm" onclick="checkConnection(<?= $olt['id'] ?>)" title="Check Connection"><i class="fa-solid fa-plug"></i></button>
                             <button class="btn btn-blue btn-sm" onclick="snmpTestOlt(<?= $olt['id'] ?>)" title="SNMP Test"><i class="fa-solid fa-bolt"></i></button>
                             <button class="btn btn-green btn-sm" onclick="syncOnus(<?= $olt['id'] ?>, '<?= addslashes(htmlspecialchars($olt['name'])) ?>')" title="Sync ONUs"><i class="fa-solid fa-rotate"></i></button>
+                            <button class="btn btn-purple btn-sm" onclick="fetchLiveOnus(<?= $olt['id'] ?>, '<?= addslashes(htmlspecialchars($olt['name'])) ?>')" title="Get All ONUs (Live)"><i class="fa-solid fa-list"></i></button>
                             <button class="btn btn-ghost btn-sm" onclick="openEditModal(<?= htmlspecialchars(json_encode($olt)) ?>)" title="Edit"><i class="fa-solid fa-pen"></i></button>
                             <a href="<?= base_url('gpon/olts/onus?olt_id='.$olt['id']) ?>" class="btn btn-ghost btn-sm" title="View ONUs"><i class="fa-solid fa-users"></i></a>
                         </div>
@@ -274,9 +275,10 @@ function checkConnection(oltId) {
         .then(r => r.json())
         .then(data => {
             if(data.status === 'success') {
+                const methodLabel = data.method ? ` <span style="font-size:10px;opacity:.7;">[${data.method}]</span>` : '';
                 statusEl.innerHTML = data.online 
-                    ? '<span class="badge badge-green"><i class="fa-solid fa-circle" style="font-size:8px;margin-right:4px;"></i> Online</span>'
-                    : '<span class="badge badge-red"><i class="fa-solid fa-circle" style="font-size:8px;margin-right:4px;"></i> Offline</span>';
+                    ? `<span class="badge badge-green"><i class="fa-solid fa-circle" style="font-size:8px;margin-right:4px;"></i> Online${methodLabel}</span>`
+                    : `<span class="badge badge-red"><i class="fa-solid fa-circle" style="font-size:8px;margin-right:4px;"></i> Offline${methodLabel}</span>`;
                 const row = document.querySelector(`tr[data-olt-id="${oltId}"]`);
                 if(row) row.cells[6].textContent = new Date().toLocaleString('en-GB', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
             }
@@ -393,8 +395,7 @@ async function snmpTestOlt(id) {
     }
 }
 
-async function syncOnus(id, name) {
-    if (!confirm(`Sync ONUs from "${name}" via SNMP?\n\nThis will fetch the live ONU list and update the database.`)) return;
+async function syncOnus(id, name) {    if (!confirm(`Sync ONUs from "${name}" via SNMP?\n\nThis will fetch the live ONU list and update the database.`)) return;
 
     const panel = document.getElementById('snmpResultPanel');
     document.getElementById('snmpPanelTitle').textContent = `Syncing ${name}...`;
@@ -421,5 +422,136 @@ async function syncOnus(id, name) {
         document.getElementById('snmpPanelTitle').textContent = '✗ Error';
         document.getElementById('snmpPanelBody').innerHTML = `<div style="color:var(--red);">${e.message}</div>`;
     }
+}
+</script>
+
+<!-- Live ONU List Modal -->
+<div class="modal-overlay" id="liveOnuModal">
+    <div class="modal" style="max-width:860px;width:95vw;">
+        <div class="modal-header">
+            <div class="modal-title"><i class="fa-solid fa-list" style="color:var(--green);margin-right:8px;"></i>Live ONU List — <span id="liveOnuOltName"></span></div>
+            <button class="icon-btn" onclick="document.getElementById('liveOnuModal').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" style="padding:0;">
+            <div id="liveOnuLoading" style="text-align:center;padding:32px;">
+                <i class="fa-solid fa-spinner fa-spin" style="font-size:28px;color:var(--blue);"></i>
+                <div style="margin-top:10px;color:var(--text2);">Fetching live ONU data from OLT...</div>
+            </div>
+            <div id="liveOnuContent" style="display:none;">
+                <div style="padding:12px 16px;display:flex;gap:16px;align-items:center;border-bottom:1px solid var(--border);flex-wrap:wrap;">
+                    <span id="liveOnuStats" style="font-size:13px;color:var(--text2);"></span>
+                    <span id="liveOnuMethod" style="font-size:12px;"></span>
+                    <input type="text" id="liveOnuSearch" class="form-input" style="width:200px;padding:5px 10px;margin-left:auto;" placeholder="Search serial / MAC..." oninput="filterLiveOnus()">
+                </div>
+                <div style="overflow-x:auto;max-height:480px;overflow-y:auto;">
+                    <table class="data-table" style="font-size:12px;">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Serial / ID</th>
+                                <th>MAC Address</th>
+                                <th>OLT Port</th>
+                                <th>Status</th>
+                                <th>Signal (dBm)</th>
+                                <th>Description</th>
+                                <th>Customer</th>
+                            </tr>
+                        </thead>
+                        <tbody id="liveOnuTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="liveOnuError" style="display:none;padding:24px;color:var(--red);text-align:center;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="document.getElementById('liveOnuModal').classList.remove('open')">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let liveOnuData = [];
+
+async function fetchLiveOnus(id, name) {
+    document.getElementById('liveOnuOltName').textContent = name;
+    document.getElementById('liveOnuLoading').style.display = 'block';
+    document.getElementById('liveOnuContent').style.display = 'none';
+    document.getElementById('liveOnuError').style.display   = 'none';
+    document.getElementById('liveOnuModal').classList.add('open');
+
+    try {
+        const res  = await fetch(`<?= base_url('gpon/api/olts') ?>/${id}/onus/live`);
+        const data = await res.json();
+
+        document.getElementById('liveOnuLoading').style.display = 'none';
+
+        if (!data.success) {
+            document.getElementById('liveOnuError').style.display = 'block';
+            document.getElementById('liveOnuError').innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${data.error || 'Failed to fetch ONU list'}`;
+            return;
+        }
+
+        liveOnuData = data.onus || [];
+        document.getElementById('liveOnuStats').innerHTML =
+            `Total: <strong>${data.total}</strong> &nbsp;|&nbsp; ` +
+            `<span style="color:var(--green);">Online: <strong>${data.online}</strong></span> &nbsp;|&nbsp; ` +
+            `<span style="color:var(--red);">Offline: <strong>${data.offline}</strong></span>`;
+
+        const methodColors = { snmp: 'badge-blue', telnet: 'badge-yellow', none: 'badge-gray' };
+        document.getElementById('liveOnuMethod').innerHTML =
+            `<span class="badge ${methodColors[data.method] || 'badge-gray'}">via ${(data.method || 'none').toUpperCase()}</span>`;
+
+        document.getElementById('liveOnuSearch').value = '';
+        renderLiveOnuTable(liveOnuData);
+        document.getElementById('liveOnuContent').style.display = 'block';
+
+    } catch (e) {
+        document.getElementById('liveOnuLoading').style.display = 'none';
+        document.getElementById('liveOnuError').style.display   = 'block';
+        document.getElementById('liveOnuError').innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Request failed: ${e.message}`;
+    }
+}
+
+function renderLiveOnuTable(onus) {
+    const tbody = document.getElementById('liveOnuTableBody');
+    if (!onus.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text2);">No ONUs found</td></tr>';
+        return;
+    }
+    tbody.innerHTML = onus.map((o, i) => {
+        const statusBadge = o.status === 'online'
+            ? '<span class="badge badge-green" style="font-size:10px;">Online</span>'
+            : '<span class="badge badge-red" style="font-size:10px;">Offline</span>';
+        const signal = o.signal_dbm !== null && o.signal_dbm !== undefined
+            ? `<span style="color:${o.signal_dbm < -27 ? 'var(--red)' : o.signal_dbm < -23 ? 'var(--yellow)' : 'var(--green)'}">${o.signal_dbm} dBm</span>`
+            : '—';
+        const customer = o.customer_name
+            ? `<span style="color:var(--blue);">${o.customer_name}</span><br><span style="color:var(--text2);font-size:10px;">${o.customer_code || ''}</span>`
+            : '<span style="color:var(--text2);">—</span>';
+        return `<tr>
+            <td>${i + 1}</td>
+            <td style="font-family:monospace;font-size:11px;">${o.serial || '—'}</td>
+            <td style="font-family:monospace;font-size:11px;">${o.mac_address || '—'}</td>
+            <td style="font-family:monospace;">${o.olt_port || '—'}</td>
+            <td>${statusBadge}</td>
+            <td>${signal}</td>
+            <td style="font-size:11px;color:var(--text2);">${o.description || '—'}</td>
+            <td style="font-size:11px;">${customer}</td>
+        </tr>`;
+    }).join('');
+}
+
+function filterLiveOnus() {
+    const q = document.getElementById('liveOnuSearch').value.toLowerCase();
+    const filtered = q
+        ? liveOnuData.filter(o =>
+            (o.serial || '').toLowerCase().includes(q) ||
+            (o.mac_address || '').toLowerCase().includes(q) ||
+            (o.olt_port || '').toLowerCase().includes(q) ||
+            (o.description || '').toLowerCase().includes(q) ||
+            (o.customer_name || '').toLowerCase().includes(q)
+          )
+        : liveOnuData;
+    renderLiveOnuTable(filtered);
 }
 </script>

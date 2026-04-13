@@ -46,6 +46,38 @@
             --tblr-btn-disabled-color: <?php echo $data['options']['text_color'];?>;
             --tblr-btn-box-shadow: <?php echo $data['options']['text_color'];?>;
         }
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-responsive table {
+            min-width: 560px;
+        }
+        .footer-branding {
+            word-break: break-word;
+            padding: 0 12px;
+        }
+        .mb-3 .btn {
+            margin-bottom: 8px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                background-attachment: scroll !important;
+            }
+            .container {
+                max-width: 100%;
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            .card-body {
+                padding: 14px;
+            }
+            .mb-3 .btn {
+                display: block;
+                width: 100%;
+            }
+        }
 
     </style>
 

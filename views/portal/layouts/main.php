@@ -51,6 +51,42 @@ $dueAmount = $customer['due_amount'] ?? 0;
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .nav-active { background: linear-gradient(135deg, rgba(14,165,233,0.2), rgba(217,70,239,0.2)); border-left: 3px solid #0ea5e9; }
         .dark .nav-active { background: linear-gradient(135deg, rgba(14,165,233,0.3), rgba(217,70,239,0.3)); }
+        main { min-width: 0; }
+        .portal-page { overflow-x: auto; }
+        .portal-page > * { max-width: 100%; }
+        .portal-page table { max-width: 100%; }
+        .portal-page img, .portal-page canvas, .portal-page video { max-width: 100%; height: auto; }
+        .portal-pay-label { display: inline; }
+
+        @media (max-width: 1024px) {
+            .portal-page { padding: 1rem; }
+            .portal-page table { min-width: 620px; }
+            .portal-date { display: none; }
+        }
+
+        @media (max-width: 768px) {
+            .portal-topbar {
+                height: auto;
+                min-height: 4rem;
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+                gap: 0.5rem;
+            }
+            .portal-topbar h2 { font-size: 1rem; line-height: 1.25rem; }
+            .portal-actions { gap: 0.5rem; }
+            .portal-pay-btn {
+                padding-left: 0.75rem;
+                padding-right: 0.75rem;
+                font-size: 0.8125rem;
+            }
+            .portal-pay-label { display: none; }
+            .portal-pay-btn i { margin-right: 0; }
+            .portal-modal-card {
+                max-height: calc(100vh - 2rem);
+                overflow-y: auto;
+                padding: 1rem;
+            }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 min-h-screen">
@@ -164,20 +200,20 @@ $dueAmount = $customer['due_amount'] ?? 0;
         <!-- Main Content -->
         <main class="flex-1 min-h-screen">
             <!-- Top Bar -->
-            <header class="h-16 bg-dark-900/80 backdrop-blur-xl border-b border-dark-700/50 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
-                <div class="flex items-center">
+            <header class="portal-topbar h-16 bg-dark-900/80 backdrop-blur-xl border-b border-dark-700/50 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-30">
+                <div class="portal-top-left flex items-center">
                     <button onclick="toggleSidebar()" class="lg:hidden p-2 rounded-lg hover:bg-dark-800 mr-3">
                         <i class="fas fa-bars text-dark-300"></i>
                     </button>
                     <div>
                         <h2 class="text-lg font-bold text-white"><?= sanitize($pageTitle ?? '') ?></h2>
-                        <p class="text-xs text-dark-400"><?= date('l, d M Y') ?></p>
+                        <p class="portal-date text-xs text-dark-400"><?= date('l, d M Y') ?></p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-3">
+                <div class="portal-actions flex items-center space-x-3">
                     <!-- Pay Bill Button - Always Visible -->
-                    <button onclick="openPayModal()" class="flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-medium text-sm hover:shadow-lg hover:shadow-green-500/30 transition-all">
-                        <i class="fas fa-credit-card mr-2"></i> Pay Bill
+                    <button onclick="openPayModal()" class="portal-pay-btn flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl font-medium text-sm hover:shadow-lg hover:shadow-green-500/30 transition-all">
+                        <i class="fas fa-credit-card mr-2"></i><span class="portal-pay-label"> Pay Bill</span>
                     </button>
                     <!-- Theme Toggle -->
                     <button onclick="toggleTheme()" class="p-2.5 rounded-xl bg-dark-800 hover:bg-dark-700 transition-colors">
@@ -187,7 +223,7 @@ $dueAmount = $customer['due_amount'] ?? 0;
             </header>
 
             <!-- Page Content -->
-            <div class="p-4 lg:p-6">
+            <div class="portal-page p-4 lg:p-6">
                 <!-- Flash Messages -->
                 <?php if (isset($_SESSION['portal_success'])): ?>
                 <div class="mb-4 p-4 bg-green-500/20 border border-green-500/30 text-green-400 rounded-xl flex items-center">
@@ -211,12 +247,31 @@ $dueAmount = $customer['due_amount'] ?? 0;
     </div>
 
     <script>
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');
-            sidebar.classList.toggle('-translate-x-full');
-            overlay.classList.toggle('hidden');
+            const isHidden = sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden', isHidden);
+            document.body.classList.toggle('overflow-hidden', !isHidden);
         }
+
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 1024) closeSidebar();
+        });
+
+        document.querySelectorAll('#sidebar a').forEach((link) => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 1024) closeSidebar();
+            });
+        });
 
         function toggleTheme() {
             document.documentElement.classList.toggle('dark');
@@ -262,7 +317,7 @@ $dueAmount = $customer['due_amount'] ?? 0;
 
     <!-- Payment Modal -->
     <div id="payModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="glass-card-dark rounded-2xl w-full max-w-md border border-dark-700/50 p-6">
+        <div class="portal-modal-card glass-card-dark rounded-2xl w-full max-w-md border border-dark-700/50 p-6">
             <div class="flex justify-between items-center mb-5">
                 <h3 class="text-xl font-bold text-white">
                     <i class="fas fa-credit-card text-green-400 mr-2"></i> Pay Bill

@@ -1,0 +1,77 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * 0'  # Run every Sunday at 2 AM
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'Dockerfile'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        exit-code: '1'
+        severity: 'CRITICAL,HIGH'
+        
+    - name: Run OWASP Dependency Check
+      uses: s0/gitguardian-shield-action@v1.0.0
+      with:
+        gg_api_key: ${{ secrets.GITGUARDIAN_API_KEY }}
+        all_files: true
+        
+    - name: Run Snyk to check for vulnerabilities
+      uses: snyk/actions/php@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
+        
+    - name: Run PHP Security Checker
+      run: |
+        curl -sS https://getcomposer.org/installer | php
+        php composer.phar require --dev enmiel/php-security-checker
+        ./vendor/bin/security-checker security:check
+        
+    - name: Run PHPStan for static analysis
+      run: |
+        composer require --dev phpstan/phpstan
+        ./vendor/bin/phpstan analyse app --level=5
+        
+    - name: Run PHP CS Fixer
+      run: |
+        composer require --dev friendsofphp/php-cs-fixer
+        ./vendor/bin/php-cs-fixer fix --dry-run --diff
+        
+    - name: Run PHP Security Checker
+      run: |
+        composer require --dev enmiel/php-security-checker
+        ./vendor/bin/security-checker security:check
+        
+    - name: Run PHP CodeSniffer
+      run: |
+        composer require --dev squizlabs/php_codesniffer
+        ./vendor/bin/phpcs --standard=PSR12 app/
+        
+    - name: Run PHP Mess Detector
+      run: |
+        composer require --dev phpmd/phpmd
+        ./vendor/bin/phpmd app text cleancode,codesize,controversial,design,naming,unusedcode
+        
+    - name: Upload security scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: trivy-results.sarif

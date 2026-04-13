@@ -42,17 +42,36 @@
             padding: 0 40px 40px 40px;
         }
 
-        @media only screen and (max-width: 600px) {
-            .container{
-                margin: 0px !important;
-            }
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .table-responsive .table {
+            min-width: 640px;
+        }
+        .no-print {
+            white-space: nowrap;
         }
 
-        .padding-1{
-            padding: 20px 10px;
-        }
-        .padding-2{
-            padding: 0 10px 20px 10px;
+        @media only screen and (max-width: 768px) {
+            .container{
+                margin: 0 !important;
+                border-radius: 0 !important;
+            }
+            .padding-1{
+                padding: 18px 12px;
+            }
+            .padding-2{
+                padding: 0 12px 20px 12px;
+            }
+            .no-print {
+                width: 100%;
+                margin-bottom: 8px;
+                white-space: normal;
+            }
+            #form {
+                width: 100%;
+            }
         }
 
         .btn-primary {

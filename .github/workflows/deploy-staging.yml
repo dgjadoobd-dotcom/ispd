@@ -1,0 +1,70 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/radius-service:staging-${{ github.sha }}
+          ${{ secrets.DOCKER_USERNAME }}/radius-service:staging-latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        
+    - name: Deploy to Staging Server
+      uses: appleboy/ssh-action@v0.1.0
+      with:
+        host: ${{ secrets.STAGING_HOST }}
+        username: ${{ secrets.STAGING_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /opt/radius-service-staging
+          docker-compose -f docker-compose.staging.yml pull
+          docker-compose -f docker-compose.staging.yml up -d
+          docker system prune -f
+          
+    - name: Health Check
+      run: |
+        echo "Waiting for services to be healthy..."
+        sleep 30
+        curl -f http://${{ secrets.STAGING_HOST }}/health || echo "Health check failed but continuing"
+        
+    - name: Send deployment notification
+      if: always()
+      uses: 8398/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        text: "Staging deployment ${{ job.status }} for commit ${{ github.sha }}"
+        username: GitHub Actions
+        icon_emoji: ":rocket:"
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

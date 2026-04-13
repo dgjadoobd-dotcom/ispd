@@ -325,56 +325,180 @@ class GponController {
         jsonResponse(['success' => true, 'message' => 'ONU deleted']);
     }
 
-    public function checkOltConnection(): void {
-        header('Content-Type: application/json');
-        $id = (int)($_GET['id'] ?? 0);
-        if(!$id) { echo json_encode(['status'=>'error']); return; }
-        
-        $olt = $this->db->fetchOne("SELECT * FROM olts WHERE id=?", [$id]);
-        if(!$olt) { echo json_encode(['status'=>'error']); return; }
-        
-        $isOnline = $this->pingHost($olt['ip_address'], $olt['access_port'] ?? 22);
+    /**
+     * GET /gpon/api/olts/check/{id}
+     * Protocol-aware connection check: SNMP → Telnet → TCP ping fallback.
+     */
+    public function checkOltConnection(string $id = '0'): void {
+        $id  = (int)$id;
+        $olt = $id ? $this->db->fetchOne("SELECT * FROM olts WHERE id=?", [$id]) : null;
+        if (!$olt) { jsonResponse(['status' => 'error', 'message' => 'OLT not found'], 404); }
+
+        $result = $this->probeOlt($olt);
+
         $this->db->update('olts', [
-            'connection_status' => $isOnline ? 'online' : 'offline',
-            'last_checked_at' => date('Y-m-d H:i:s')
-        ], 'id = ?', [$id]);
-        
-        echo json_encode([
-            'status' => 'success',
-            'online' => $isOnline,
-            'ip' => $olt['ip_address'],
-            'port' => $olt['access_port'] ?? 22
+            'connection_status' => $result['online'] ? 'online' : 'offline',
+            'last_checked_at'   => date('Y-m-d H:i:s'),
+        ], 'id=?', [$id]);
+
+        jsonResponse([
+            'status'      => 'success',
+            'online'      => $result['online'],
+            'method'      => $result['method'],
+            'description' => $result['description'],
+            'ip'          => $olt['ip_address'],
+            'port'        => $olt['access_port'] ?? 22,
         ]);
     }
 
+    /**
+     * GET /gpon/api/olts/check-all
+     * Protocol-aware check for all active OLTs.
+     */
     public function checkAllOltConnections(): void {
-        header('Content-Type: application/json');
-        $olts = $this->db->fetchAll("SELECT * FROM olts WHERE is_active=1");
+        $olts    = $this->db->fetchAll("SELECT * FROM olts WHERE is_active=1");
         $results = [];
-        
-        foreach($olts as $olt) {
-            $isOnline = $this->pingHost($olt['ip_address'], $olt['access_port'] ?? 22);
+
+        foreach ($olts as $olt) {
+            $result = $this->probeOlt($olt);
             $this->db->update('olts', [
-                'connection_status' => $isOnline ? 'online' : 'offline',
-                'last_checked_at' => date('Y-m-d H:i:s')
-            ], 'id = ?', [$olt['id']]);
-            $results[] = ['id'=>$olt['id'], 'name'=>$olt['name'], 'online'=>$isOnline];
+                'connection_status' => $result['online'] ? 'online' : 'offline',
+                'last_checked_at'   => date('Y-m-d H:i:s'),
+            ], 'id=?', [$olt['id']]);
+            $results[] = [
+                'id'          => $olt['id'],
+                'name'        => $olt['name'],
+                'online'      => $result['online'],
+                'method'      => $result['method'],
+                'description' => $result['description'],
+            ];
         }
-        
-        echo json_encode(['status'=>'success', 'results'=>$results]);
+
+        jsonResponse(['status' => 'success', 'results' => $results]);
     }
 
-    private function pingHost(string $ip, int $port = 22): bool {
-        if(empty($ip)) return false;
-        $socket = @fsockopen($ip, $port, $errno, $errstr, 3);
-        if($socket) {
-            fclose($socket);
-            return true;
+    /**
+     * GET /gpon/api/olts/{id}/onus/live
+     * Fetch live ONU list directly from OLT (SNMP or Telnet), no DB cache.
+     */
+    public function getLiveOnuList(string $id = '0'): void
+    {
+        $id  = (int)$id;
+        $olt = $id ? $this->db->fetchOne("SELECT * FROM olts WHERE id=?", [$id]) : null;
+        if (!$olt) { jsonResponse(['success' => false, 'error' => 'OLT not found'], 404); }
+
+        require_once BASE_PATH . '/app/Services/SnmpOltService.php';
+        require_once BASE_PATH . '/app/Services/TelnetOltService.php';
+
+        $community = $olt['snmp_community'] ?: 'public';
+        $version   = str_replace('v', '', $olt['snmp_version'] ?? '2c');
+        $onuList   = [];
+        $method    = 'none';
+
+        // Try SNMP first
+        $snmpSvc = new SnmpOltService($olt['ip_address'], $community, $version);
+        $conn    = $snmpSvc->testConnection();
+
+        if ($conn['success'] && ($conn['method'] ?? '') === 'snmp') {
+            $onuList = $snmpSvc->getOnuList();
+            $method  = 'snmp';
         }
-        $output = [];
-        $port = ($port == 22) ? 80 : $port;
-        exec("ping -n 1 -w 1000 " . escapeshellarg($ip) . " 2>nul", $output, $ret);
-        return $ret === 0;
+
+        // Fallback to Telnet
+        if (empty($onuList) && !empty($olt['username'])) {
+            $telnet  = new TelnetOltService($olt['ip_address'], $olt['username'], $olt['password'] ?? '', 23, 10);
+            $onuList = $telnet->getOnuList();
+            $method  = 'telnet';
+        }
+
+        // Annotate each ONU with DB customer info if MAC or serial matches
+        foreach ($onuList as &$onu) {
+            $customer = null;
+            if (!empty($onu['mac_address'])) {
+                $customer = $this->db->fetchOne(
+                    "SELECT c.full_name, c.customer_code FROM onus o JOIN customers c ON c.id=o.customer_id WHERE o.mac_address=? LIMIT 1",
+                    [$onu['mac_address']]
+                );
+            }
+            if (!$customer && !empty($onu['serial'])) {
+                $customer = $this->db->fetchOne(
+                    "SELECT c.full_name, c.customer_code FROM onus o JOIN customers c ON c.id=o.customer_id WHERE o.serial_number=? LIMIT 1",
+                    [$onu['serial']]
+                );
+            }
+            $onu['customer_name'] = $customer['full_name']    ?? null;
+            $onu['customer_code'] = $customer['customer_code'] ?? null;
+        }
+        unset($onu);
+
+        jsonResponse([
+            'success'   => true,
+            'method'    => $method,
+            'olt_name'  => $olt['name'],
+            'olt_ip'    => $olt['ip_address'],
+            'total'     => count($onuList),
+            'online'    => count(array_filter($onuList, fn($o) => ($o['status'] ?? '') === 'online')),
+            'offline'   => count(array_filter($onuList, fn($o) => ($o['status'] ?? '') !== 'online')),
+            'onus'      => $onuList,
+        ]);
+    }
+
+    /**
+     * Probe an OLT using its configured protocol.
+     * Returns ['online' => bool, 'method' => string, 'description' => string]
+     */
+    private function probeOlt(array $olt): array {
+        $ip       = $olt['ip_address'] ?? '';
+        $protocol = strtolower($olt['protocol'] ?? 'ssh');
+        $port     = (int)($olt['access_port'] ?? 22);
+
+        if (empty($ip)) {
+            return ['online' => false, 'method' => 'none', 'description' => 'No IP configured'];
+        }
+
+        // SNMP protocol: use SnmpOltService
+        if ($protocol === 'snmp') {
+            require_once BASE_PATH . '/app/Services/SnmpOltService.php';
+            $community = $olt['snmp_community'] ?: 'public';
+            $version   = str_replace('v', '', $olt['snmp_version'] ?? '2c');
+            $svc       = new SnmpOltService($ip, $community, $version);
+            $conn      = $svc->testConnection();
+            return [
+                'online'      => $conn['success'],
+                'method'      => $conn['method'],
+                'description' => $conn['description'] ?: ($conn['error'] ?? ''),
+            ];
+        }
+
+        // Telnet protocol: use TelnetOltService
+        if ($protocol === 'telnet' && !empty($olt['username'])) {
+            require_once BASE_PATH . '/app/Services/TelnetOltService.php';
+            $telnet = new TelnetOltService($ip, $olt['username'], $olt['password'] ?? '', $port ?: 23, 6);
+            $conn   = $telnet->testConnection();
+            return [
+                'online'      => $conn['success'],
+                'method'      => 'telnet',
+                'description' => $conn['description'] ?? ($conn['error'] ?? ''),
+            ];
+        }
+
+        // SSH / HTTP / HTTPS / generic: TCP socket check on configured port
+        $sock = @fsockopen($ip, $port ?: 22, $errno, $errstr, 4);
+        if ($sock) {
+            fclose($sock);
+            return ['online' => true, 'method' => 'tcp', 'description' => "TCP port $port open"];
+        }
+
+        // Last resort: ICMP ping
+        $pingCmd = PHP_OS_FAMILY === 'Windows'
+            ? "ping -n 1 -w 2000 " . escapeshellarg($ip) . " 2>nul"
+            : "ping -c 1 -W 2 "    . escapeshellarg($ip) . " 2>/dev/null";
+        exec($pingCmd, $out, $ret);
+        return [
+            'online'      => $ret === 0,
+            'method'      => 'icmp',
+            'description' => $ret === 0 ? 'Host responds to ping' : 'Host unreachable',
+        ];
     }
 
     public function splitters(): void {
