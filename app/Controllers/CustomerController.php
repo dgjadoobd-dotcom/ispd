@@ -189,6 +189,26 @@ class CustomerController {
         $workOrders = $this->db->fetchAll(
             "SELECT wo.*, t.name as technician FROM work_orders wo LEFT JOIN technicians t ON t.id=wo.technician_id WHERE wo.customer_id=? ORDER BY wo.created_at DESC LIMIT 5", [$id]);
 
+        // AI Account Health Summary
+        $aiService = new AiService();
+        $aiSummary = null;
+        if (env('AI_ENABLED')) {
+            $billingStatus = !empty($invoices) ? ($invoices[0]['status'] === 'unpaid' ? 'Overdue' : 'Paid') : 'No History';
+            $lastPayment = !empty($payments) ? date('d M Y', strtotime($payments[0]['payment_date'])) : 'Never';
+            $prompt = "Provide a 1-2 sentence professional summary of this ISP customer's account health for an admin.
+            Name: {$customer['full_name']}
+            Status: {$customer['status']}
+            Billing: $billingStatus
+            Last Payment: $lastPayment
+            Package: {$customer['package_name']}
+            Recent Work Orders: " . count($workOrders);
+            
+            $aiSummary = $aiService->getChatCompletion([
+                ['role' => 'system', 'content' => 'You are an ISP business analyst. Be brief and professional.'],
+                ['role' => 'user', 'content' => $prompt]
+            ], ['max_tokens' => 100]);
+        }
+
         $viewFile = BASE_PATH . '/views/customers/view.php';
         require_once BASE_PATH . '/views/layouts/main.php';
     }

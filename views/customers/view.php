@@ -46,6 +46,23 @@
     </div>
 </div>
 
+<!-- AI Account Health Summary -->
+<?php if (env('AI_ENABLED') && !empty($aiSummary)): ?>
+<div class="card fade-in" style="padding:16px 20px; margin-bottom:20px; border-left: 4px solid var(--purple); background: linear-gradient(to right, rgba(124, 58, 237, 0.05), transparent);">
+    <div style="display:flex; align-items:center; gap:12px;">
+        <div style="width:36px; height:36px; border-radius:10px; background:rgba(124, 58, 237, 0.1); color:var(--purple); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text2); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">AI Account Insight</div>
+            <div style="font-size:14px; font-weight:500; color:var(--text); line-height:1.4;">
+                <?= sanitize($aiSummary) ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Quick Stats -->
 <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;" class="fade-in">
     <div class="card" style="padding:16px;text-align:center;">

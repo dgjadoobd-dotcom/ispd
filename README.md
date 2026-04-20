@@ -114,34 +114,97 @@ Open **http://localhost:8088** and login with `admin` / `Admin@1234`
    ```
 5. Set write permissions: `chmod 775 tmp/ public/assets/uploads/`
 
-### Option C — VPS / Ubuntu + Nginx
+### Option C — VPS / Ubuntu 24.04 + Nginx
 
-```nginx
-server {
-    listen 80;
-    server_name isp.yourdomain.com;
-    root /var/www/digitalisp/public;
-    index index.php;
+1. **Update system and install dependencies:**
+   ```bash
+   sudo apt update && sudo apt upgrade -y
+   sudo apt install -y nginx mysql-server php8.3 php8.3-fpm php8.3-mysql php8.3-mbstring php8.3-curl php8.3-gd php8.3-snmp php8.3-xml php8.3-zip unzip curl
+   ```
 
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
+2. **Secure MySQL installation:**
+   ```bash
+   sudo mysql_secure_installation
+   ```
 
-    location ~ \.php$ {
-        include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php8.1-fpm.sock;
-    }
+3. **Create database and user:**
+   ```bash
+   sudo mysql -u root -p
+   CREATE DATABASE digitalisp;
+   CREATE USER 'digitalisp'@'localhost' IDENTIFIED BY 'your_password';
+   GRANT ALL PRIVILEGES ON digitalisp.* TO 'digitalisp'@'localhost';
+   FLUSH PRIVILEGES;
+   EXIT;
+   ```
 
-    location ~ /\.(?!well-known).* {
-        deny all;
-    }
-}
-```
+4. **Clone and setup project:**
+   ```bash
+   sudo mkdir -p /var/www
+   cd /var/www
+   sudo git clone https://github.com/jdkamrul/digitalisp.git
+   sudo chown -R www-data:www-data /var/www/digitalisp
+   cd /var/www/digitalisp
+   sudo cp .env.example .env
+   # Edit .env with your database credentials
+   sudo nano .env
+   ```
 
-```bash
-sudo chown -R www-data:www-data /var/www/digitalisp
-sudo chmod -R 775 /var/www/digitalisp/tmp
-```
+5. **Install PHP dependencies:**
+   ```bash
+   sudo apt install -y composer
+   composer install --no-dev --optimize-autoloader
+   ```
+
+6. **Setup database:**
+   ```bash
+   sudo mysql -u digitalisp -p digitalisp < database/schema.sql
+   sudo php setup.php
+   ```
+
+7. **Configure Nginx:**
+   ```nginx
+   sudo nano /etc/nginx/sites-available/digitalisp
+   ```
+   Add this content:
+   ```nginx
+   server {
+       listen 80;
+       server_name isp.yourdomain.com;
+       root /var/www/digitalisp/public;
+       index index.php;
+
+       location / {
+           try_files $uri $uri/ /index.php?$query_string;
+       }
+
+       location ~ \.php$ {
+           include snippets/fastcgi-php.conf;
+           fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
+       }
+
+       location ~ /\.(?!well-known).* {
+           deny all;
+       }
+   }
+   ```
+
+8. **Enable site and restart services:**
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/digitalisp /etc/nginx/sites-enabled/
+   sudo nginx -t
+   sudo systemctl reload nginx
+   sudo systemctl enable php8.3-fpm
+   sudo systemctl enable mysql
+   ```
+
+9. **Set permissions:**
+   ```bash
+   sudo chown -R www-data:www-data /var/www/digitalisp
+   sudo chmod -R 775 /var/www/digitalisp/tmp /var/www/digitalisp/public/assets/uploads
+   ```
+
+10. **Access your application:**
+    Visit `http://your_server_ip` and login with `admin` / `Admin@1234`
 
 ### Option D — Docker
 

@@ -47,6 +47,22 @@
             </div>
         </div>
 
+        <!-- AI Technician Assistant -->
+        <?php if (env('AI_ENABLED') && !empty($aiSuggestion)): ?>
+        <div class="card" style="padding:20px; border-left: 4px solid var(--blue); background: linear-gradient(to right, rgba(37, 99, 235, 0.05), transparent);">
+            <div style="font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                <i class="fa-solid fa-robot" style="color:var(--blue);"></i>
+                Technician's AI Assistant
+            </div>
+            <div style="font-size:13px;line-height:1.6;color:var(--text);background:var(--bg2);padding:14px;border-radius:8px;border:1px dashed var(--border);">
+                <?= nl2br(sanitize($aiSuggestion)) ?>
+            </div>
+            <div style="font-size:11px;color:var(--text2);margin-top:10px;font-style:italic;">
+                <i class="fa-solid fa-info-circle"></i> AI-generated suggestions based on work order details.
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Update Status -->
         <?php if($wo['status'] !== 'completed' && $wo['status'] !== 'cancelled'): ?>
         <div class="card" style="padding:20px;">

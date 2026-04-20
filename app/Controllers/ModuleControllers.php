@@ -703,6 +703,19 @@ class WorkOrderController {
 
     public function store(): void {
         $num = 'WO-' . date('Ymd') . '-' . str_pad(rand(1,9999),4,'0',STR_PAD_LEFT);
+        $title = sanitize($_POST['title'] ?? '');
+        $description = sanitize($_POST['description'] ?? '');
+        $priority = sanitize($_POST['priority'] ?? 'normal');
+
+        // AI Analysis for priority
+        if (env('AI_ENABLED')) {
+            $aiService = new AiService();
+            $analysis = $aiService->analyzeTicket($title, $description);
+            if ($analysis && !empty($analysis['priority'])) {
+                $priority = $analysis['priority'];
+            }
+        }
+
         $this->db->insert('work_orders', [
             'wo_number'    => $num,
             'customer_id'  => (int)$_POST['customer_id'] ?: null,
@@ -710,9 +723,9 @@ class WorkOrderController {
             'zone_id'      => (int)$_POST['zone_id'] ?: null,
             'technician_id'=> (int)$_POST['technician_id'] ?: null,
             'type'         => sanitize($_POST['type'] ?? 'other'),
-            'priority'     => sanitize($_POST['priority'] ?? 'normal'),
-            'title'        => sanitize($_POST['title'] ?? ''),
-            'description'  => sanitize($_POST['description'] ?? ''),
+            'priority'     => $priority,
+            'title'        => $title,
+            'description'  => $description,
             'address'      => sanitize($_POST['address'] ?? ''),
             'scheduled_date'=> !empty($_POST['scheduled_date']) ? sanitize($_POST['scheduled_date']) : null,
             'status'       => 'pending',
@@ -731,6 +744,20 @@ class WorkOrderController {
              WHERE wo.id=?", [$id]
         );
         if (!$wo) { http_response_code(404); die('Work order not found'); }
+
+        // AI Assistant for Technician
+        $aiService = new AiService();
+        $aiSuggestion = null;
+        if (env('AI_ENABLED')) {
+            $messages = [
+                ['role' => 'system', 'content' => "You are an expert ISP field technician assistant. 
+                Analyze the work order and provide a concise list of possible causes and recommended tools/steps for the technician.
+                Focus on practical ISP infrastructure like ONU, Splitter, Fiber, or MikroTik configuration."],
+                ['role' => 'user', 'content' => "Work Order Title: {$wo['title']}\nType: {$wo['type']}\nDescription: {$wo['description']}"]
+            ];
+            $aiSuggestion = $aiService->getChatCompletion($messages);
+        }
+
         $technicians = $this->db->fetchAll("SELECT id,name FROM technicians WHERE is_active=1");
         $viewFile = BASE_PATH . '/views/workorders/view.php';
         require_once BASE_PATH . '/views/layouts/main.php';

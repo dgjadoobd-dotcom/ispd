@@ -1,7 +1,26 @@
 <?php
-global $ticket, $replies;
+global $ticket, $replies, $aiSuggestion;
 ?>
 <div class="max-w-4xl mx-auto">
+    <?php if (env('AI_ENABLED') && $aiSuggestion): ?>
+    <div class="mb-6 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-5">
+        <div class="flex items-start gap-3">
+            <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shrink-0 mt-0.5">
+                <i class="fas fa-robot text-sm"></i>
+            </div>
+            <div>
+                <h4 class="font-semibold text-indigo-900 dark:text-indigo-100 mb-1">AI Troubleshooting Assistant</h4>
+                <p class="text-sm text-indigo-800/80 dark:text-indigo-200/80 leading-relaxed italic">
+                    <?= nl2br(sanitize($aiSuggestion)) ?>
+                </p>
+                <div class="mt-3 flex items-center gap-2 text-xs text-indigo-500 font-medium">
+                    <span class="flex items-center gap-1"><i class="fas fa-info-circle"></i> AI-generated tips for faster resolution</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border">
         <div class="p-6 border-b flex justify-between items-start">
             <div>

@@ -69,6 +69,20 @@ class PortalSupportController extends PortalController {
             $priority = 'normal';
         }
 
+        // AI Analysis
+        $aiService = new AiService();
+        if (env('AI_ENABLED')) {
+            $analysis = $aiService->analyzeTicket($subject, $description);
+            if ($analysis) {
+                if (!empty($analysis['category']) && in_array($analysis['category'], ['billing', 'technical', 'complaint', 'general', 'new_connection', 'disconnection'])) {
+                    $category = $analysis['category'];
+                }
+                if (!empty($analysis['priority']) && in_array($analysis['priority'], ['low', 'normal', 'high', 'urgent'])) {
+                    $priority = $analysis['priority'];
+                }
+            }
+        }
+
         $ticketNumber = 'TKT-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
 
         $ticketId = $this->db->insert('support_tickets', [
@@ -120,6 +134,13 @@ class PortalSupportController extends PortalController {
              ORDER BY tr.created_at ASC",
             [$id, $customerId]
         );
+
+        // AI Assistant
+        $aiService = new AiService();
+        $aiSuggestion = null;
+        if (env('AI_ENABLED')) {
+            $aiSuggestion = $aiService->suggestSupportResponse($ticket['subject'], $ticket['description'], $replies);
+        }
 
         $pageTitle = 'Ticket #' . $ticket['ticket_number'];
         $currentPage = 'support';
