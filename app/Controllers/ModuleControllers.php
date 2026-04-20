@@ -1187,6 +1187,42 @@ class SettingsController {
         redirect(base_url('settings'));
     }
 
+    public function saveAi(): void {
+        $aiEnabled = isset($_POST['ai_enabled']) ? '1' : '0';
+        $aiBaseUrl = sanitize($_POST['ai_base_url'] ?? 'http://localhost:1234/v1');
+        $aiModel = sanitize($_POST['ai_model'] ?? 'google/gemma-4-e4b');
+        $aiTimeout = (int)($_POST['ai_timeout'] ?? 30);
+
+        // Update .env file directly since AI settings are environment-based
+        $envPath = BASE_PATH . '/.env';
+        if (file_exists($envPath)) {
+            $envContent = file_get_contents($envPath);
+            $envContent = preg_replace('/^AI_ENABLED=.*/m', "AI_ENABLED=$aiEnabled", $envContent);
+            $envContent = preg_replace('/^AI_BASE_URL=.*/m', "AI_BASE_URL=$aiBaseUrl", $envContent);
+            $envContent = preg_replace('/^AI_MODEL=.*/m', "AI_MODEL=$aiModel", $envContent);
+            $envContent = preg_replace('/^AI_TIMEOUT=.*/m', "AI_TIMEOUT=$aiTimeout", $envContent);
+            file_put_contents($envPath, $envContent);
+        }
+
+        $_SESSION['success'] = "AI settings updated successfully.";
+        redirect(base_url('settings#ai'));
+    }
+
+    public function saveApp(): void {
+        $fields = [
+            'app_playstore_url', 'app_appstore_url', 'app_android_version', 'app_ios_version',
+            'app_force_update', 'app_maintenance_mode', 'app_announcement', 'app_primary_color', 'app_support_phone'
+        ];
+        foreach ($fields as $f) {
+            $val = sanitize($_POST[$f] ?? '');
+            $exists = $this->db->fetchOne("SELECT id FROM settings WHERE `key`=?", [$f]);
+            if ($exists) { $this->db->update('settings', ['value'=>$val], '`key`=?', [$f]); }
+            else { $this->db->insert('settings', ['key'=>$f,'value'=>$val]); }
+        }
+        $_SESSION['success'] = "Mobile app settings updated.";
+        redirect(base_url('settings#app'));
+    }
+
     public function saveReseller(): void {
         $fields = [
             'reseller_panel_enabled', 'reseller_portal_name', 'reseller_support_phone', 

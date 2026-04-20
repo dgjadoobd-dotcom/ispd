@@ -51,7 +51,7 @@ Manage customers, billing, GPON/fiber networks, MikroTik routers, RADIUS AAA, in
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/jdkamrul/digitalisp.git
+git clone https://github.com/dgjadoobd-dotcom/ispd.git
 cd digitalisp
 
 # 2. Copy environment file
@@ -94,7 +94,7 @@ Open **http://localhost:8088** and login with `admin` / `Admin@1234`
    LoadModule rewrite_module modules/mod_rewrite.so
    ```
 4. Run `php setup.php`
-5. Visit **http://localhost/digitalisp/public/**
+5. Visit **http://localhost/ispd/public/**
 
 ### Option B — cPanel / Shared Hosting (MySQL)
 
@@ -141,7 +141,7 @@ Open **http://localhost:8088** and login with `admin` / `Admin@1234`
    ```bash
    sudo mkdir -p /var/www
    cd /var/www
-   sudo git clone https://github.com/jdkamrul/digitalisp.git
+   sudo git clone https://github.com/dgjadoobd-dotcom/ispd.git
    sudo chown -R www-data:www-data /var/www/digitalisp
    cd /var/www/digitalisp
    sudo cp .env.example .env
@@ -426,7 +426,7 @@ Unauthorized copying, distribution, or modification is prohibited.
 
 **Digital ISP ERP Team**  
 📧 admin@bkdnet.xyz  
-🌐 [github.com/jdkamrul/digitalisp](https://github.com/jdkamrul/digitalisp)
+🌐 [github.com/dgjadoobd-dotcom/ispd](https://github.com/dgjadoobd-dotcom/ispd)
 
 ---
 

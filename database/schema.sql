@@ -1,7 +1,7 @@
 -- ============================================================
 -- Digital ISP ERP — Full MySQL Database Schema
 -- Bangladesh ISP ERP System
--- Version: 1.0.0 | Timezone: Asia/Dhaka
+-- Version: 1.0.1 | Timezone: Asia/Dhaka
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS digital_isp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

@@ -60,6 +60,7 @@
                 ['general','fa-gear','General'],
                 ['app','fa-mobile-screen','App Settings'],
                 ['sms','fa-message','SMS Gateway'],
+                ['ai','fa-wand-magic-sparkles','AI Assistant'],
                 ['packages','fa-wifi','Packages'],
                 ['reseller', 'fa-store', 'Reseller Panel'],
                 ['users', 'fa-users', 'Staff Users'],
@@ -132,6 +133,49 @@
                         </div>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width:fit-content;"><i class="fa-solid fa-save"></i> Save App Settings</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- AI Assistant -->
+        <div class="settings-pane" id="pane-ai">
+            <div class="card" style="padding:20px;">
+                <div style="font-size:15px;font-weight:700;margin-bottom:18px;"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--purple);margin-right:8px;"></i>AI Assistant Configuration</div>
+                <form method="POST" action="<?= base_url('settings/ai') ?>" style="display:grid;gap:14px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                        <div>
+                            <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                                <input type="checkbox" name="ai_enabled" value="1" <?= (env('AI_ENABLED') ? 'checked' : '') ?> style="width:18px;height:18px;">
+                                <span style="font-weight:600;">Enable AI Features</span>
+                            </label>
+                            <div style="font-size:12px;color:var(--text2);margin-top:4px;">Requires LM Studio or compatible API server</div>
+                        </div>
+                        <div><label class="form-label">AI API Base URL</label><input type="url" name="ai_base_url" class="form-input" value="<?= htmlspecialchars(env('AI_BASE_URL') ?: 'http://localhost:1234/v1') ?>" placeholder="http://localhost:1234/v1"></div>
+                        <div><label class="form-label">AI Model</label><input type="text" name="ai_model" class="form-input" value="<?= htmlspecialchars(env('AI_MODEL') ?: 'google/gemma-4-e4b') ?>" placeholder="google/gemma-4-e4b"></div>
+                        <div><label class="form-label">API Timeout (seconds)</label><input type="number" name="ai_timeout" class="form-input" value="<?= htmlspecialchars(env('AI_TIMEOUT') ?: 30) ?>" min="5" max="120"></div>
+                    </div>
+                    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:8px;">
+                        <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text);">AI Features Status</div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <i class="fa-solid fa-circle-check" style="color:var(--green);"></i>
+                                <span style="font-size:13px;">Customer Account Insights</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <i class="fa-solid fa-circle-check" style="color:var(--green);"></i>
+                                <span style="font-size:13px;">Support Ticket Analysis</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <i class="fa-solid fa-circle-check" style="color:var(--green);"></i>
+                                <span style="font-size:13px;">Work Order Assistance</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <i class="fa-solid fa-circle-check" style="color:var(--green);"></i>
+                                <span style="font-size:13px;">Portal Troubleshooting</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:fit-content;"><i class="fa-solid fa-save"></i> Save AI Settings</button>
                 </form>
             </div>
         </div>

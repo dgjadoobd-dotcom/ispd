@@ -247,6 +247,8 @@ Router::prefix('/payment/selfhosted', function() {
 Router::prefix('/settings', function() {
     Router::get('', 'SettingsController@index', ['AuthMiddleware']);
     Router::post('/general', 'SettingsController@saveGeneral', ['AuthMiddleware']);
+    Router::post('/app', 'SettingsController@saveApp', ['AuthMiddleware']);
+    Router::post('/ai', 'SettingsController@saveAi', ['AuthMiddleware']);
     Router::post('/reseller', 'SettingsController@saveReseller', ['AuthMiddleware']);
     Router::post('/packages/store', 'SettingsController@storePackage', ['AuthMiddleware']);
     Router::post('/packages/update', 'SettingsController@updatePackage', ['AuthMiddleware']);
