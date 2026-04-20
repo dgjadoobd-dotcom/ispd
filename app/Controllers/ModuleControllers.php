@@ -524,6 +524,8 @@ class GponController {
     public function onus(): void {
         $pageTitle = 'ONU / CPE Devices'; $currentPage = 'gpon'; $currentSubPage = 'onus';
         $page   = max(1,(int)($_GET['page']??1)); $limit=50; $offset=($page-1)*$limit;
+        $total  = $this->db->fetchOne("SELECT COUNT(*) as cnt FROM onus")['cnt'];
+        $totalPages = ceil($total / $limit);
         $onus   = $this->db->fetchAll(
             "SELECT o.*,
                     c.full_name as customer_name, c.customer_code, c.id as customer_id,

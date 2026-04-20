@@ -132,9 +132,31 @@ $faultyCount = count(array_filter($onus, fn($o) => $o['status'] === 'faulty'));
         </table>
     </div>
     <div style="padding:10px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);" id="onuTableFooter">
-        Showing <?= count($onus) ?> devices
+        Showing <?= min($offset+1, $total) ?>–<?= min($offset+count($onus), $total) ?> of <?= number_format($total) ?> devices
     </div>
 </div>
+
+<!-- Pagination -->
+<?php if ($totalPages > 1): ?>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:12px;flex-wrap:wrap;">
+    <div style="font-size:13px;color:var(--text2);">
+        Page <?= $page ?> of <?= $totalPages ?>
+    </div>
+    <div style="display:flex;gap:6px;margin-left:auto;">
+        <?php for ($i=1;$i<=$totalPages;$i++): ?>
+        <?php if ($i==1 || $i==$totalPages || abs($i-$page)<=2): ?>
+        <a href="?<?= http_build_query(array_merge($_GET,['page'=>$i])) ?>"
+           style="width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:13px;font-weight:500;text-decoration:none;
+                  <?= $i===$page ? 'background:var(--blue);color:#fff;' : 'background:var(--bg3);color:var(--text2);' ?>">
+            <?= $i ?>
+        </a>
+        <?php elseif (abs($i-$page)==3): ?>
+        <span style="color:var(--text2);display:inline-flex;align-items:center;padding:0 4px;">…</span>
+        <?php endif; ?>
+        <?php endfor; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Add ONU Modal -->
 <div class="modal-overlay" id="addOnuModal">
