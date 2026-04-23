@@ -2,10 +2,35 @@
 <div class="page-header fade-in">
     <div>
         <h1 class="page-title"><?= htmlspecialchars($reseller['business_name']) ?></h1>
-        <div class="page-breadcrumb"><a href="<?= base_url('resellers') ?>" style="color:var(--blue);text-decoration:none;">Resellers</a> › Details</div>
+        <div class="page-breadcrumb">
+            <a href="<?= base_url('resellers') ?>" style="color:var(--blue);text-decoration:none;">Resellers</a> › Details
+        </div>
     </div>
-    <a href="<?= base_url('resellers') ?>" class="btn btn-ghost"><i class="fa-solid fa-arrow-left"></i> Back</a>
+    <div style="display:flex;gap:8px;">
+        <a href="<?= base_url("resellers/edit/{$reseller['id']}") ?>" class="btn btn-ghost">
+            <i class="fa-solid fa-pen"></i> Edit
+        </a>
+        <a href="<?= base_url('resellers') ?>" class="btn btn-ghost">
+            <i class="fa-solid fa-arrow-left"></i> Back
+        </a>
+    </div>
 </div>
+
+<?php if (!empty($_SESSION['success'])): ?>
+<div style="margin-bottom:16px;padding:12px 16px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);border-radius:10px;color:var(--green);font-size:13px;" class="fade-in">
+    <i class="fa-solid fa-circle-check" style="margin-right:8px;"></i>
+    <?= htmlspecialchars($_SESSION['success']) ?>
+    <?php unset($_SESSION['success']); ?>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($_SESSION['error'])): ?>
+<div style="margin-bottom:16px;padding:12px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:var(--red);font-size:13px;" class="fade-in">
+    <i class="fa-solid fa-circle-exclamation" style="margin-right:8px;"></i>
+    <?= htmlspecialchars($_SESSION['error']) ?>
+    <?php unset($_SESSION['error']); ?>
+</div>
+<?php endif; ?>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="fade-in">
     <!-- Info -->

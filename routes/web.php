@@ -156,6 +156,10 @@ Router::prefix('/inventory', function() {
     Router::post('/purchases/store', 'InventoryController@storePurchase', ['AuthMiddleware']);
     Router::post('/purchases/receive/{id}', 'InventoryController@receivePO', ['AuthMiddleware']);
     Router::post('/purchases/delete/{id}', 'InventoryController@deletePO', ['AuthMiddleware']);
+    Router::get('/suppliers', 'InventoryController@suppliers', ['AuthMiddleware']);
+    Router::post('/suppliers/store', 'InventoryController@storeSupplier', ['AuthMiddleware']);
+    Router::post('/suppliers/update/{id}', 'InventoryController@updateSupplier', ['AuthMiddleware']);
+    Router::post('/suppliers/delete/{id}', 'InventoryController@deleteSupplier', ['AuthMiddleware']);
 });
 
 // ── Resellers ─────────────────────────────────────────────────────
@@ -168,6 +172,33 @@ Router::prefix('/resellers', function() {
     Router::post('/update/{id}', 'ResellerController@update', ['AuthMiddleware']);
     Router::post('/delete/{id}', 'ResellerController@delete', ['AuthMiddleware']);
     Router::post('/topup/{id}', 'ResellerController@topup', ['AuthMiddleware']);
+});
+
+// ── MAC Resellers ─────────────────────────────────────────────────
+Router::prefix('/mac-resellers', function() {
+    Router::get('', 'MacResellerController@index', ['AuthMiddleware']);
+    Router::get('/create', 'MacResellerController@create', ['AuthMiddleware']);
+    Router::post('/store', 'MacResellerController@store', ['AuthMiddleware']);
+    Router::get('/view/{id}', 'MacResellerController@view', ['AuthMiddleware']);
+    Router::get('/edit/{id}', 'MacResellerController@edit', ['AuthMiddleware']);
+    Router::post('/update/{id}', 'MacResellerController@update', ['AuthMiddleware']);
+    Router::post('/delete/{id}', 'MacResellerController@delete', ['AuthMiddleware']);
+    Router::post('/topup/{id}', 'MacResellerController@topup', ['AuthMiddleware']);
+    // Tariff plans
+    Router::get('/{id}/tariffs', 'MacResellerController@tariffs', ['AuthMiddleware']);
+    Router::post('/{id}/tariffs/store', 'MacResellerController@storeTariff', ['AuthMiddleware']);
+    Router::post('/tariffs/update/{tid}', 'MacResellerController@updateTariff', ['AuthMiddleware']);
+    Router::post('/tariffs/delete/{tid}', 'MacResellerController@deleteTariff', ['AuthMiddleware']);
+    // Clients
+    Router::get('/{id}/clients', 'MacResellerController@clients', ['AuthMiddleware']);
+    Router::post('/{id}/clients/store', 'MacResellerController@storeClient', ['AuthMiddleware']);
+    Router::post('/clients/update/{cid}', 'MacResellerController@updateClient', ['AuthMiddleware']);
+    Router::post('/clients/delete/{cid}', 'MacResellerController@deleteClient', ['AuthMiddleware']);
+    Router::post('/clients/suspend/{cid}', 'MacResellerController@suspendClient', ['AuthMiddleware']);
+    // Billing
+    Router::get('/{id}/billing', 'MacResellerController@billing', ['AuthMiddleware']);
+    Router::post('/{id}/billing/generate', 'MacResellerController@generateBilling', ['AuthMiddleware']);
+    Router::post('/billing/pay/{bid}', 'MacResellerController@payBilling', ['AuthMiddleware']);
 });
 
 // ── Work Orders ───────────────────────────────────────────────────
@@ -241,6 +272,65 @@ Router::prefix('/payment/selfhosted', function() {
     Router::post('/queue/{invoice_id}', 'SelfHostedPipraPayController@queueAutomatedPayment', ['AuthMiddleware']);
     Router::get('/status/{customer_id}', 'SelfHostedPipraPayController@getBillingStatus', ['AuthMiddleware']);
     Router::post('/process-automated', 'SelfHostedPipraPayController@processAutomatedBilling', ['AuthMiddleware']);
+});
+
+// ── HR & Payroll ──────────────────────────────────────────────────
+Router::prefix('/hr', function() {
+    Router::get('', 'HrController@index', ['AuthMiddleware']);
+    // Employees
+    Router::get('/employees', 'HrController@employees', ['AuthMiddleware']);
+    Router::get('/employees/create', 'HrController@createEmployee', ['AuthMiddleware']);
+    Router::post('/employees/store', 'HrController@storeEmployee', ['AuthMiddleware']);
+    Router::get('/employees/view/{id}', 'HrController@viewEmployee', ['AuthMiddleware']);
+    Router::get('/employees/edit/{id}', 'HrController@editEmployee', ['AuthMiddleware']);
+    Router::post('/employees/update/{id}', 'HrController@updateEmployee', ['AuthMiddleware']);
+    Router::post('/employees/leave/{id}', 'HrController@updateLeaveBalance', ['AuthMiddleware']);
+    Router::post('/employees/appraisal/{id}', 'HrController@storeAppraisal', ['AuthMiddleware']);
+    // Attendance
+    Router::get('/attendance', 'HrController@attendance', ['AuthMiddleware']);
+    Router::post('/attendance/store', 'HrController@storeAttendance', ['AuthMiddleware']);
+    // Payroll
+    Router::get('/payroll', 'HrController@payroll', ['AuthMiddleware']);
+    Router::post('/payroll/generate', 'HrController@generatePayroll', ['AuthMiddleware']);
+    Router::get('/payroll/slip/{id}', 'HrController@viewSalarySlip', ['AuthMiddleware']);
+    // Departments
+    Router::get('/departments', 'HrController@departments', ['AuthMiddleware']);
+    Router::post('/departments/store', 'HrController@storeDepartment', ['AuthMiddleware']);
+    Router::post('/departments/update/{id}', 'HrController@updateDepartment', ['AuthMiddleware']);
+    Router::post('/departments/delete/{id}', 'HrController@deleteDepartment', ['AuthMiddleware']);
+});
+
+// ── Support & Ticketing ───────────────────────────────────────────
+Router::prefix('/support', function() {
+    Router::get('', 'SupportController@index', ['AuthMiddleware']);
+    // Tickets
+    Router::get('/tickets', 'SupportController@tickets', ['AuthMiddleware']);
+    Router::get('/tickets/create', 'SupportController@create', ['AuthMiddleware']);
+    Router::post('/tickets/store', 'SupportController@store', ['AuthMiddleware']);
+    Router::get('/tickets/view/{id}', 'SupportController@view', ['AuthMiddleware']);
+    Router::get('/tickets/edit/{id}', 'SupportController@edit', ['AuthMiddleware']);
+    Router::post('/tickets/update/{id}', 'SupportController@update', ['AuthMiddleware']);
+    Router::post('/tickets/assign/{id}', 'SupportController@assign', ['AuthMiddleware']);
+    Router::post('/tickets/comment/{id}', 'SupportController@comment', ['AuthMiddleware']);
+    Router::post('/tickets/resolve/{id}', 'SupportController@resolve', ['AuthMiddleware']);
+    Router::post('/tickets/close/{id}', 'SupportController@close', ['AuthMiddleware']);
+    // Dashboard & SLA
+    Router::get('/dashboard', 'SupportController@dashboard', ['AuthMiddleware']);
+    Router::post('/check-sla', 'SupportController@checkSla', ['AuthMiddleware']);
+});
+
+// ── Roles & Permissions ───────────────────────────────────────────
+Router::prefix('/roles', function() {
+    Router::get('', 'RoleController@index', ['AuthMiddleware']);
+    Router::get('/create', 'RoleController@create', ['AuthMiddleware']);
+    Router::post('/store', 'RoleController@store', ['AuthMiddleware']);
+    Router::get('/edit/{id}', 'RoleController@edit', ['AuthMiddleware']);
+    Router::post('/update/{id}', 'RoleController@update', ['AuthMiddleware']);
+    Router::post('/delete/{id}', 'RoleController@delete', ['AuthMiddleware']);
+    Router::post('/permissions/{id}', 'RoleController@savePermissions', ['AuthMiddleware']);
+    Router::get('/users/{id}', 'RoleController@users', ['AuthMiddleware']);
+    Router::post('/assign-user', 'RoleController@assignUser', ['AuthMiddleware']);
+    Router::post('/seed', 'RoleController@seed', ['AuthMiddleware']);
 });
 
 // ── Settings ──────────────────────────────────────────────────────

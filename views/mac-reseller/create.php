@@ -1,25 +1,24 @@
-<?php // views/reseller/create.php
-$isEdit     = isset($reseller) && $reseller !== null;
-$formAction = $isEdit ? base_url("resellers/update/{$reseller['id']}") : base_url('resellers/store');
-$pageHeading = $isEdit ? 'Edit Reseller' : 'Add Reseller';
-$breadcrumb  = $isEdit ? 'Edit' : 'New';
+<?php // views/mac-reseller/create.php
+$isEdit      = isset($reseller) && $reseller !== null;
+$formAction  = $isEdit ? base_url("mac-resellers/update/{$reseller['id']}") : base_url('mac-resellers/store');
+$pageHeading = $isEdit ? 'Edit MAC Reseller' : 'Add MAC Reseller';
 ?>
 <div class="page-header fade-in">
     <div>
         <h1 class="page-title"><?= $pageHeading ?></h1>
         <div class="page-breadcrumb">
-            <a href="<?= base_url('resellers') ?>" style="color:var(--blue);text-decoration:none;">Resellers</a> › <?= $breadcrumb ?>
+            <a href="<?= base_url('mac-resellers') ?>" style="color:var(--blue);text-decoration:none;">MAC Resellers</a>
+            › <?= $isEdit ? 'Edit' : 'New' ?>
         </div>
     </div>
-    <a href="<?= $isEdit ? base_url("resellers/view/{$reseller['id']}") : base_url('resellers') ?>" class="btn btn-ghost">
+    <a href="<?= $isEdit ? base_url("mac-resellers/view/{$reseller['id']}") : base_url('mac-resellers') ?>" class="btn btn-ghost">
         <i class="fa-solid fa-arrow-left"></i> Back
     </a>
 </div>
 
 <?php if (!empty($_SESSION['error'])): ?>
-<div class="alert alert-danger fade-in" style="margin-bottom:16px;padding:12px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:var(--red);font-size:13px;">
-    <i class="fa-solid fa-circle-exclamation" style="margin-right:8px;"></i>
-    <?= htmlspecialchars($_SESSION['error']) ?>
+<div style="margin-bottom:16px;padding:12px 16px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:var(--red);font-size:13px;" class="fade-in">
+    <i class="fa-solid fa-circle-exclamation" style="margin-right:8px;"></i><?= htmlspecialchars($_SESSION['error']) ?>
     <?php unset($_SESSION['error']); ?>
 </div>
 <?php endif; ?>
@@ -28,7 +27,7 @@ $breadcrumb  = $isEdit ? 'Edit' : 'New';
 <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;">
     <div class="card fade-in" style="padding:20px;">
         <div style="font-size:14px;font-weight:700;margin-bottom:16px;">
-            <i class="fa-solid fa-building" style="color:var(--blue);margin-right:8px;"></i>Reseller Information
+            <i class="fa-solid fa-network-wired" style="color:var(--blue);margin-right:8px;"></i>MAC Reseller Information
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
             <div>
@@ -67,36 +66,14 @@ $breadcrumb  = $isEdit ? 'Edit' : 'New';
                 </select>
             </div>
             <div>
-                <label class="form-label">Zone</label>
-                <select name="zone_id" class="form-input">
-                    <option value="">Any Zone</option>
-                    <?php foreach ($zones as $z): ?>
-                    <option value="<?= $z['id'] ?>" <?= ($reseller['zone_id'] ?? '') == $z['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($z['name']) ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div>
                 <label class="form-label">Commission Rate (%)</label>
                 <input type="number" name="commission_rate" class="form-input" step="0.5" min="0" max="100"
-                       value="<?= htmlspecialchars($reseller['commission_rate'] ?? '10') ?>">
+                       value="<?= htmlspecialchars($reseller['commission_rate'] ?? '0') ?>">
             </div>
             <div>
                 <label class="form-label">Credit Limit (৳)</label>
                 <input type="number" name="credit_limit" class="form-input" step="0.01" min="0"
                        value="<?= htmlspecialchars($reseller['credit_limit'] ?? '0') ?>">
-            </div>
-            <div>
-                <label class="form-label">Parent Reseller</label>
-                <select name="parent_reseller_id" class="form-input">
-                    <option value="">None (Top Level)</option>
-                    <?php foreach ($parents as $p): ?>
-                    <option value="<?= $p['id'] ?>" <?= ($reseller['parent_reseller_id'] ?? '') == $p['id'] ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($p['business_name']) ?>
-                    </option>
-                    <?php endforeach; ?>
-                </select>
             </div>
             <?php if ($isEdit): ?>
             <div>
@@ -108,6 +85,10 @@ $breadcrumb  = $isEdit ? 'Edit' : 'New';
                 </select>
             </div>
             <?php endif; ?>
+            <div style="grid-column:1/-1;">
+                <label class="form-label">Notes</label>
+                <textarea name="notes" class="form-input" rows="2"><?= htmlspecialchars($reseller['notes'] ?? '') ?></textarea>
+            </div>
         </div>
     </div>
 
@@ -115,15 +96,15 @@ $breadcrumb  = $isEdit ? 'Edit' : 'New';
         <div class="card fade-in" style="padding:18px;">
             <div style="font-size:12px;color:var(--text2);line-height:1.7;">
                 <i class="fa-solid fa-info-circle" style="color:var(--blue);margin-right:6px;"></i>
-                Resellers can manage their own customers and collect payments. Commission is calculated automatically based on their collections.
+                MAC Resellers manage clients by MAC address. After creating the reseller, add tariff plans and clients from the detail page.
             </div>
         </div>
         <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;">
             <i class="fa-solid <?= $isEdit ? 'fa-save' : 'fa-plus' ?>"></i>
-            <?= $isEdit ? 'Save Changes' : 'Add Reseller' ?>
+            <?= $isEdit ? 'Save Changes' : 'Add MAC Reseller' ?>
         </button>
         <?php if ($isEdit): ?>
-        <a href="<?= base_url("resellers/view/{$reseller['id']}") ?>" class="btn btn-ghost" style="width:100%;justify-content:center;padding:13px;">
+        <a href="<?= base_url("mac-resellers/view/{$reseller['id']}") ?>" class="btn btn-ghost" style="width:100%;justify-content:center;padding:13px;">
             Cancel
         </a>
         <?php endif; ?>

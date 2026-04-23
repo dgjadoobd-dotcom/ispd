@@ -66,12 +66,14 @@ class CustomerController {
         }
 
         $customers = $this->db->fetchAll(
-            "SELECT c.*, p.name as package_name, p.speed_download, p.speed_upload, z.name as zone_name, b.name as branch_name,
-                    (SELECT mac_address FROM mac_bindings mb WHERE mb.username = c.pppoe_username AND mb.is_active = 1 LIMIT 1) as mac_address
+            "SELECT c.*, p.name as package_name, p.speed_download, p.speed_upload,
+                    z.name as zone_name, b.name as branch_name, n.name as nas_name,
+                    (SELECT mac_address FROM mac_bindings mb WHERE mb.username = c.pppoe_username AND mb.is_active = 1 LIMIT 1) as mac_from_binding
              FROM customers c
              LEFT JOIN packages p ON p.id = c.package_id
              LEFT JOIN zones z ON z.id = c.zone_id
              LEFT JOIN branches b ON b.id = c.branch_id
+             LEFT JOIN nas_devices n ON n.id = c.nas_id
              WHERE $whereStr ORDER BY c.created_at DESC LIMIT $limit OFFSET $offset",
             $params
         );
@@ -121,6 +123,18 @@ class CustomerController {
             'billing_day'     => (int)($_POST['billing_day'] ?? 1),
             'notes'           => sanitize($_POST['notes'] ?? ''),
             'created_by'      => $_SESSION['user_id'],
+            // Extended client fields
+            'mac_address'          => strtoupper(trim(sanitize($_POST['mac_address'] ?? ''))),
+            'road_no'              => sanitize($_POST['road_no'] ?? ''),
+            'house_no'             => sanitize($_POST['house_no'] ?? ''),
+            'sub_zone'             => sanitize($_POST['sub_zone'] ?? ''),
+            'box_no'               => sanitize($_POST['box_no'] ?? ''),
+            'client_type'          => in_array($_POST['client_type'] ?? '', ['home','business','corporate','other']) ? $_POST['client_type'] : 'home',
+            'thana'                => sanitize($_POST['thana'] ?? ''),
+            'district'             => sanitize($_POST['district'] ?? ''),
+            'device_name'          => sanitize($_POST['device_name'] ?? ''),
+            'device_purchase_date' => !empty($_POST['device_purchase_date']) ? sanitize($_POST['device_purchase_date']) : null,
+            'assigned_employee'    => sanitize($_POST['assigned_employee'] ?? ''),
         ];
 
         if (empty($data['full_name']) || empty($data['phone'])) {
@@ -241,6 +255,18 @@ class CustomerController {
             'monthly_charge'  => (float)($_POST['monthly_charge'] ?? 0),
             'billing_day'     => (int)($_POST['billing_day'] ?? 1),
             'notes'           => sanitize($_POST['notes'] ?? ''),
+            // Extended client fields
+            'mac_address'          => strtoupper(trim(sanitize($_POST['mac_address'] ?? ''))),
+            'road_no'              => sanitize($_POST['road_no'] ?? ''),
+            'house_no'             => sanitize($_POST['house_no'] ?? ''),
+            'sub_zone'             => sanitize($_POST['sub_zone'] ?? ''),
+            'box_no'               => sanitize($_POST['box_no'] ?? ''),
+            'client_type'          => in_array($_POST['client_type'] ?? '', ['home','business','corporate','other']) ? $_POST['client_type'] : 'home',
+            'thana'                => sanitize($_POST['thana'] ?? ''),
+            'district'             => sanitize($_POST['district'] ?? ''),
+            'device_name'          => sanitize($_POST['device_name'] ?? ''),
+            'device_purchase_date' => !empty($_POST['device_purchase_date']) ? sanitize($_POST['device_purchase_date']) : null,
+            'assigned_employee'    => sanitize($_POST['assigned_employee'] ?? ''),
         ];
         $this->db->update('customers', $data, 'id=?', [$id]);
         
@@ -382,101 +408,431 @@ class CustomerController {
 
     public function import(): void {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST' || empty($_FILES['csv_file']['tmp_name'])) {
-            $_SESSION['error'] = "Invalid file or request.";
+            $_SESSION['error'] = 'No file uploaded.';
             redirect(base_url('customers'));
+            return;
         }
 
         $file = $_FILES['csv_file']['tmp_name'];
-        $handle = fopen($file, "r");
-        $header = fgetcsv($handle); // Skip header
+        $ext  = strtolower(pathinfo($_FILES['csv_file']['name'], PATHINFO_EXTENSION));
 
-        $count = 0;
-        $errors = 0;
+        if (!in_array($ext, ['csv', 'xlsx', 'xls'], true)) {
+            $_SESSION['error'] = 'Only CSV, XLSX, or XLS files are accepted.';
+            redirect(base_url('customers'));
+            return;
+        }
 
-        while (($row = fgetcsv($handle)) !== false) {
-            if (count($row) < 3) continue;
-            // Map: 0=Name, 1=Phone, 2=Address, 3=Package_Name, 4=Zone_Name
-            $name    = sanitize($row[0]);
-            $phone   = sanitize($row[1]);
-            $address = sanitize($row[2] ?? '');
-            $pkgName = sanitize($row[3] ?? '');
-            $zoneName = sanitize($row[4] ?? '');
+        // ── Required columns (exact header names) ──────────────────────────
+        $requiredCols = ['Client Name', 'Mobile'];
 
-            if (empty($name) || empty($phone)) { $errors++; continue; }
+        // ── All recognised columns → DB field mapping ──────────────────────
+        $colMap = [
+            'ID/IP'              => 'pppoe_username',
+            'C.Code'             => '_skip',           // we generate our own
+            'Client Name'        => 'full_name',
+            'Email'              => 'email',
+            'Mobile'             => 'phone',
+            'Road No'            => 'road_no',
+            'House No'           => 'house_no',
+            'NID'                => 'nid_number',
+            'Zone'               => '_zone',
+            'Sub Zone'           => 'sub_zone',
+            'Box'                => 'box_no',
+            'Address'            => 'address',
+            'Package'            => '_package',
+            'Server'             => '_nas',
+            'Speed'              => '_skip',
+            'Ex.Date'            => 'expiration',
+            'Password'           => 'pppoe_password',
+            'Conn. Type'         => 'connection_type',
+            'Client Type'        => 'client_type',
+            'M.Bill'             => 'monthly_charge',
+            'MACAddress'         => 'mac_address',
+            'Protocol'           => '_skip',
+            'B.Status'           => '_status',
+            'ClientJoiningDate'  => 'connection_date',
+            'Remarks'            => 'notes',
+            'Thana'              => 'thana',
+            'District'           => 'district',
+            'Device'             => 'device_name',
+            'PurchaseDate'       => 'device_purchase_date',
+            'AssignedEmployee'   => 'assigned_employee',
+        ];
 
-            // Find package/zone IDs
-            $pkg = $this->db->fetchOne("SELECT id FROM packages WHERE name = ?", [$pkgName]);
-            $zone = $this->db->fetchOne("SELECT id FROM zones WHERE name = ?", [$zoneName]);
+        // ── Parse file into rows ────────────────────────────────────────────
+        $rows = [];
+        if ($ext === 'csv') {
+            $handle = fopen($file, 'r');
+            $headers = fgetcsv($handle);
+            if (!$headers) {
+                $_SESSION['error'] = 'CSV file is empty or unreadable.';
+                redirect(base_url('customers'));
+                return;
+            }
+            // Trim BOM and whitespace from headers
+            $headers = array_map(fn($h) => trim(preg_replace('/^\xEF\xBB\xBF/', '', $h)), $headers);
+            while (($row = fgetcsv($handle)) !== false) {
+                if (count($row) === count($headers)) {
+                    $rows[] = array_combine($headers, $row);
+                }
+            }
+            fclose($handle);
+        } else {
+            // XLSX/XLS: parse manually (no external library — read as ZIP/XML)
+            $rows = $this->parseXlsx($file);
+            if ($rows === null) {
+                $_SESSION['error'] = 'Could not parse XLSX file. Please use CSV format or ensure the file is a valid Excel file.';
+                redirect(base_url('customers'));
+                return;
+            }
+        }
 
-            // Default branch (first one)
-            $branch = $this->db->fetchOne("SELECT id FROM branches LIMIT 1");
+        if (empty($rows)) {
+            $_SESSION['error'] = 'The file contains no data rows.';
+            redirect(base_url('customers'));
+            return;
+        }
 
+        // ── Validate headers ────────────────────────────────────────────────
+        $fileHeaders = array_keys($rows[0]);
+        $missingRequired = [];
+        foreach ($requiredCols as $req) {
+            if (!in_array($req, $fileHeaders, true)) {
+                $missingRequired[] = $req;
+            }
+        }
+        if (!empty($missingRequired)) {
+            $_SESSION['error'] = 'Missing required columns: ' . implode(', ', $missingRequired) . '. Please download the template and use the correct column headers.';
+            redirect(base_url('customers'));
+            return;
+        }
+
+        // ── Pre-load lookup tables ──────────────────────────────────────────
+        $packages  = $this->db->fetchAll("SELECT id, name FROM packages WHERE is_active=1");
+        $zones     = $this->db->fetchAll("SELECT id, name FROM zones WHERE is_active=1");
+        $nasDevices = $this->db->fetchAll("SELECT id, name FROM nas_devices WHERE is_active=1");
+        $branch    = $this->db->fetchOne("SELECT id FROM branches WHERE is_active=1 LIMIT 1");
+        $branchId  = $branch['id'] ?? 1;
+
+        $pkgIndex  = [];
+        foreach ($packages  as $p) $pkgIndex[strtolower(trim($p['name']))]  = $p['id'];
+        $zoneIndex = [];
+        foreach ($zones     as $z) $zoneIndex[strtolower(trim($z['name']))] = $z['id'];
+        $nasIndex  = [];
+        foreach ($nasDevices as $n) $nasIndex[strtolower(trim($n['name']))]  = $n['id'];
+
+        // ── Process rows ────────────────────────────────────────────────────
+        $imported  = 0;
+        $skipped   = 0;
+        $rejected  = [];
+
+        foreach ($rows as $lineNo => $row) {
+            $rowNum = $lineNo + 2; // +2 because line 1 = header
+
+            // Skip completely empty rows
+            $rowValues = array_filter(array_map('trim', $row));
+            if (empty($rowValues)) { $skipped++; continue; }
+
+            // ── Required field check ────────────────────────────────────────
+            $fullName = trim($row['Client Name'] ?? '');
+            $phone    = trim($row['Mobile'] ?? '');
+
+            if (empty($fullName)) {
+                $rejected[] = "Row {$rowNum}: Client Name is required.";
+                continue;
+            }
+            if (empty($phone)) {
+                $rejected[] = "Row {$rowNum} ({$fullName}): Mobile is required.";
+                continue;
+            }
+
+            // ── Duplicate check: phone ──────────────────────────────────────
+            $dupPhone = $this->db->fetchOne("SELECT id FROM customers WHERE phone=?", [$phone]);
+            if ($dupPhone) {
+                $rejected[] = "Row {$rowNum} ({$fullName}): Phone {$phone} already exists — skipped.";
+                continue;
+            }
+
+            // ── Duplicate check: pppoe_username ─────────────────────────────
+            $pppoeUser = trim($row['ID/IP'] ?? '');
+            if (!empty($pppoeUser)) {
+                $dupUser = $this->db->fetchOne("SELECT id FROM customers WHERE pppoe_username=?", [$pppoeUser]);
+                if ($dupUser) {
+                    $rejected[] = "Row {$rowNum} ({$fullName}): PPPoE username '{$pppoeUser}' already exists — skipped.";
+                    continue;
+                }
+            }
+
+            // ── Duplicate check: MAC address ────────────────────────────────
+            $macRaw = strtoupper(trim($row['MACAddress'] ?? ''));
+            if (!empty($macRaw)) {
+                $dupMac = $this->db->fetchOne("SELECT id FROM customers WHERE mac_address=?", [$macRaw]);
+                if ($dupMac) {
+                    $rejected[] = "Row {$rowNum} ({$fullName}): MAC address '{$macRaw}' already exists — skipped.";
+                    continue;
+                }
+            }
+
+            // ── Resolve lookups ─────────────────────────────────────────────
+            $pkgName  = strtolower(trim($row['Package'] ?? ''));
+            $zoneName = strtolower(trim($row['Zone'] ?? ''));
+            $nasName  = strtolower(trim($row['Server'] ?? ''));
+
+            $packageId = $pkgIndex[$pkgName] ?? null;
+            $zoneId    = $zoneIndex[$zoneName] ?? null;
+            $nasId     = $nasIndex[$nasName] ?? null;
+
+            // ── Parse status ────────────────────────────────────────────────
+            $rawStatus = strtolower(trim($row['B.Status'] ?? 'active'));
+            $status = match($rawStatus) {
+                'active', '1', 'yes' => 'active',
+                'inactive', 'suspended', '0', 'no' => 'suspended',
+                default => 'active',
+            };
+
+            // ── Parse connection date ────────────────────────────────────────
+            $rawDate = trim($row['ClientJoiningDate'] ?? '');
+            $connDate = date('Y-m-d');
+            if (!empty($rawDate)) {
+                $ts = strtotime($rawDate);
+                if ($ts !== false) $connDate = date('Y-m-d', $ts);
+            }
+
+            // ── Parse expiry date ────────────────────────────────────────────
+            $rawExpiry = trim($row['Ex.Date'] ?? '');
+            $expiry = null;
+            if (!empty($rawExpiry)) {
+                $ts = strtotime($rawExpiry);
+                if ($ts !== false) $expiry = date('Y-m-d', $ts);
+            }
+
+            // ── Parse device purchase date ───────────────────────────────────
+            $rawPurchase = trim($row['PurchaseDate'] ?? '');
+            $purchaseDate = null;
+            if (!empty($rawPurchase)) {
+                $ts = strtotime($rawPurchase);
+                if ($ts !== false) $purchaseDate = date('Y-m-d', $ts);
+            }
+
+            // ── Parse monthly bill ───────────────────────────────────────────
+            $monthlyCharge = (float)preg_replace('/[^0-9.]/', '', $row['M.Bill'] ?? '0');
+
+            // ── Parse connection type ────────────────────────────────────────
+            $rawConnType = strtolower(trim($row['Conn. Type'] ?? 'pppoe'));
+            $connType = in_array($rawConnType, ['pppoe','hotspot','static','cgnat']) ? $rawConnType : 'pppoe';
+
+            // ── Parse client type ────────────────────────────────────────────
+            $rawClientType = strtolower(trim($row['Client Type'] ?? 'home'));
+            $clientType = in_array($rawClientType, ['home','business','corporate','other']) ? $rawClientType : 'home';
+
+            // ── Build insert data ────────────────────────────────────────────
             $data = [
-                'customer_code'   => $this->generateCustomerCode(),
-                'branch_id'       => $branch['id'] ?? 1,
-                'full_name'       => $name,
-                'phone'           => $phone,
-                'address'         => $address,
-                'package_id'      => $pkg['id'] ?? null,
-                'zone_id'         => $zone['id'] ?? null,
-                'status'          => 'active',
-                'connection_date' => date('Y-m-d'),
-                'created_by'      => $_SESSION['user_id'] ?? 0,
+                'customer_code'        => $this->generateCustomerCode(),
+                'branch_id'            => $branchId,
+                'package_id'           => $packageId,
+                'zone_id'              => $zoneId,
+                'nas_id'               => $nasId,
+                'full_name'            => sanitize($fullName),
+                'phone'                => sanitize($phone),
+                'email'                => sanitize(trim($row['Email'] ?? '')),
+                'address'              => sanitize(trim($row['Address'] ?? '')),
+                'nid_number'           => sanitize(trim($row['NID'] ?? '')),
+                'pppoe_username'       => sanitize($pppoeUser),
+                'pppoe_password'       => sanitize(trim($row['Password'] ?? '')),
+                'connection_type'      => $connType,
+                'client_type'          => $clientType,
+                'mac_address'          => $macRaw,
+                'road_no'              => sanitize(trim($row['Road No'] ?? '')),
+                'house_no'             => sanitize(trim($row['House No'] ?? '')),
+                'sub_zone'             => sanitize(trim($row['Sub Zone'] ?? '')),
+                'box_no'               => sanitize(trim($row['Box'] ?? '')),
+                'monthly_charge'       => $monthlyCharge,
+                'status'               => $status,
+                'connection_date'      => $connDate,
+                'expiration'           => $expiry,
+                'notes'                => sanitize(trim($row['Remarks'] ?? '')),
+                'thana'                => sanitize(trim($row['Thana'] ?? '')),
+                'district'             => sanitize(trim($row['District'] ?? '')),
+                'device_name'          => sanitize(trim($row['Device'] ?? '')),
+                'device_purchase_date' => $purchaseDate,
+                'assigned_employee'    => sanitize(trim($row['AssignedEmployee'] ?? '')),
+                'created_by'           => $_SESSION['user_id'] ?? 0,
             ];
 
             try {
                 $this->db->insert('customers', $data);
-                $count++;
-            } catch (Exception $e) { $errors++; }
+                $imported++;
+            } catch (\Exception $e) {
+                $rejected[] = "Row {$rowNum} ({$fullName}): Database error — " . $e->getMessage();
+            }
         }
-        fclose($handle);
 
-        $_SESSION['success'] = "Successfully imported $count customers. (Errors: $errors)";
+        // ── Build result message ─────────────────────────────────────────────
+        $msg = "Import complete: {$imported} imported";
+        if ($skipped > 0)       $msg .= ", {$skipped} empty rows skipped";
+        if (!empty($rejected))  $msg .= ", " . count($rejected) . " rejected";
+        $msg .= '.';
+
+        if (!empty($rejected)) {
+            $_SESSION['import_errors'] = $rejected;
+        }
+        $_SESSION['success'] = $msg;
         redirect(base_url('customers'));
     }
 
     /**
-     * Download import template (XLSX or CSV demo file).
-     * GET /customers/download-template?type=xlsx|csv
+     * Parse a simple XLSX file without external libraries.
+     * Returns array of associative rows, or null on failure.
      */
-    public function downloadTemplate(): void {
-        $type     = strtolower(sanitize($_GET['type'] ?? 'xlsx'));
-        $allowed  = ['xlsx', 'csv'];
-        if (!in_array($type, $allowed, true)) $type = 'xlsx';
+    private function parseXlsx(string $filePath): ?array {
+        if (!class_exists('ZipArchive')) return null;
 
-        $fileMap = [
-            'xlsx' => BASE_PATH . '/docs/samples/customers_import_template.xlsx',
-            'csv'  => BASE_PATH . '/docs/samples/customers_import_template.csv',
-        ];
+        $zip = new \ZipArchive();
+        if ($zip->open($filePath) !== true) return null;
 
-        $filePath = $fileMap[$type];
-
-        // Auto-generate if missing
-        if (!file_exists($filePath)) {
-            $genScript = BASE_PATH . '/scripts/generate_demo_excel.php';
-            if (file_exists($genScript)) {
-                require_once $genScript;
+        // Read shared strings
+        $sharedStrings = [];
+        $ssXml = $zip->getFromName('xl/sharedStrings.xml');
+        if ($ssXml) {
+            $ss = simplexml_load_string($ssXml);
+            if ($ss) {
+                foreach ($ss->si as $si) {
+                    // Concatenate all <t> elements (handles rich text)
+                    $text = '';
+                    foreach ($si->r ?? [$si] as $r) {
+                        $text .= (string)($r->t ?? $r);
+                    }
+                    $sharedStrings[] = $text;
+                }
             }
         }
 
-        if (!file_exists($filePath)) {
-            $_SESSION['error'] = 'Template file not found. Run: php scripts/generate_demo_excel.php';
-            redirect(base_url('customers'));
+        // Read first sheet
+        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $zip->close();
+        if (!$sheetXml) return null;
+
+        $sheet = simplexml_load_string($sheetXml);
+        if (!$sheet) return null;
+
+        $rawRows = [];
+        foreach ($sheet->sheetData->row ?? [] as $row) {
+            $rowData = [];
+            foreach ($row->c as $cell) {
+                $colLetter = preg_replace('/[0-9]/', '', (string)$cell['r']);
+                $colIndex  = $this->xlsxColToIndex($colLetter);
+                $type      = (string)($cell['t'] ?? '');
+                $val       = (string)($cell->v ?? '');
+                if ($type === 's') {
+                    $val = $sharedStrings[(int)$val] ?? '';
+                }
+                $rowData[$colIndex] = $val;
+            }
+            if (!empty($rowData)) $rawRows[] = $rowData;
         }
 
-        $mimeMap = [
-            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'csv'  => 'text/csv; charset=utf-8',
+        if (count($rawRows) < 2) return [];
+
+        // First row = headers
+        $headers = $rawRows[0];
+        $maxCol  = max(array_keys($headers));
+        $result  = [];
+        for ($i = 1; $i < count($rawRows); $i++) {
+            $assoc = [];
+            for ($c = 0; $c <= $maxCol; $c++) {
+                $header = trim($headers[$c] ?? '');
+                $assoc[$header] = trim($rawRows[$i][$c] ?? '');
+            }
+            $result[] = $assoc;
+        }
+        return $result;
+    }
+
+    private function xlsxColToIndex(string $col): int {
+        $col   = strtoupper($col);
+        $index = 0;
+        for ($i = 0; $i < strlen($col); $i++) {
+            $index = $index * 26 + (ord($col[$i]) - ord('A') + 1);
+        }
+        return $index - 1;
+    }
+
+    /**
+     * Download import template — generates CSV inline with all columns,
+     * a rules row, and 3 sample data rows matching the Excel format.
+     * GET /customers/download-template?type=csv|xlsx
+     */
+    public function downloadTemplate(): void {
+        $type = strtolower(sanitize($_GET['type'] ?? 'csv'));
+
+        // ── Column definitions ──────────────────────────────────────────────
+        $columns = [
+            'ID/IP', 'C.Code', 'Client Name', 'Email', 'Mobile',
+            'Road No', 'House No', 'NID', 'Zone', 'Sub Zone', 'Box',
+            'Address', 'Package', 'Server', 'Speed', 'Ex.Date',
+            'Password', 'Conn. Type', 'Client Type', 'M.Bill',
+            'MACAddress', 'Protocol', 'B.Status', 'ClientJoiningDate',
+            'Remarks', 'Thana', 'District', 'Device', 'PurchaseDate',
+            'AssignedEmployee',
         ];
 
-        $filename = 'customers_import_template.' . $type;
+        // ── Rules row (shown as row 2 in the file) ──────────────────────────
+        $rules = [
+            'PPPoE username or IP', 'Auto-generated (leave blank)', 'REQUIRED — Full name',
+            'Optional email', 'REQUIRED — 01XXXXXXXXX', 'Optional', 'Optional',
+            'National ID number', 'Zone name (must match system)', 'Sub-zone name',
+            'Box/cabinet number', 'Installation address', 'Package name (must match system)',
+            'NAS/Server name (must match system)', 'Auto from package', 'YYYY-MM-DD or MM/DD/YYYY',
+            'PPPoE password', 'pppoe / hotspot / static', 'home / business / corporate',
+            'Monthly bill amount (numbers only)', 'AA:BB:CC:DD:EE:FF format',
+            'PPPOE / HOTSPOT', 'Active / Inactive', 'YYYY-MM-DD or MM/DD/YYYY',
+            'Optional remarks', 'Thana/Upazila', 'District name',
+            'Device model name', 'YYYY-MM-DD', 'Employee name',
+        ];
 
-        header('Content-Type: ' . $mimeMap[$type]);
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Content-Length: ' . filesize($filePath));
+        // ── Sample data rows ────────────────────────────────────────────────
+        $samples = [
+            [
+                'sohel@majpara', '', 'Md. Sohel', 'sohel@gmail.com', '01795381737',
+                '', '', '1234567890', 'Majpara', '', '',
+                'Majpara Mor', 'Home Basic Plus', 'MR3-R1', '20', '2025-12-31',
+                '12345', 'pppoe', 'home', '515.00',
+                '30:16:9D:52:F3:48', 'PPPOE', 'Active', '2024-12-20',
+                '', 'chapai-nawabgonj', 'chapai-nawabgonj', 'TP-Link', '2024-01-01', 'Rahim',
+            ],
+            [
+                'bairul@batenkha', '', 'Md. Bairul Islam', '', '01716332903',
+                '', '', '', 'Batenkha', '', '',
+                'Batenkha Mor', 'Home Basic Plus', 'MR3-R1', '16', '',
+                '12345', 'pppoe', 'home', '515.00',
+                'B8:3A:08:A6:64:0F', 'PPPOE', 'Active', '2024-12-16',
+                '', '', '', '', '', '',
+            ],
+            [
+                'office', '', 'Office User', 'office@isp.com', '01856308066',
+                '5', '12', '', 'Kharopara', '', '9',
+                'Kharopara Office', 'Home Premium Plus', 'MR3-R1', '30', '2025-06-30',
+                'office123', 'pppoe', 'business', '515.00',
+                '04:95:E6:FB:B9:CF', 'PPPOE', 'Active', '2025-01-13',
+                'Office connection', 'chapai-nawabgonj', 'chapai-nawabgonj', 'Mikrotik hAP', '2024-06-01', 'Karim',
+            ],
+        ];
+
+        // ── Output CSV ──────────────────────────────────────────────────────
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="customers_import_template.csv"');
         header('Cache-Control: no-cache, must-revalidate');
         header('Pragma: no-cache');
-        readfile($filePath);
+
+        $out = fopen('php://output', 'w');
+        // UTF-8 BOM for Excel compatibility
+        fputs($out, "\xEF\xBB\xBF");
+        fputcsv($out, $columns);
+        fputcsv($out, $rules);
+        foreach ($samples as $sample) {
+            fputcsv($out, $sample);
+        }
+        fclose($out);
         exit;
     }
 

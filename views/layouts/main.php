@@ -433,19 +433,91 @@
 
         /* ── SIDEBAR COLLAPSED (desktop) ── */
         @media (min-width: 769px) {
-            body.sidebar-collapsed #sidebar { width: 60px; }
+            /* Smooth width transition */
+            #sidebar {
+                transition: width 0.25s ease, transform 0.3s ease;
+            }
+            #header, #main {
+                transition: left 0.25s ease, margin-left 0.25s ease;
+            }
+
+            body.sidebar-collapsed #sidebar { width: 60px; overflow: visible; }
+
+            /* Hide text labels, chevrons, submenus, section dividers */
             body.sidebar-collapsed .logo-text,
             body.sidebar-collapsed .logo-sub,
-            body.sidebar-collapsed .nav-item .left-part span:not(.icon),
+            body.sidebar-collapsed .nav-item .nav-label,
             body.sidebar-collapsed .nav-item .chevron,
             body.sidebar-collapsed .submenu,
-            body.sidebar-collapsed #sidebarNav > div[style*="padding:12px"] { display: none; }
-            body.sidebar-collapsed .nav-item { justify-content: center; padding: 10px; margin: 2px 4px; }
+            body.sidebar-collapsed #sidebarNav > div[style*="padding:12px"],
+            body.sidebar-collapsed .sidebar-branch-name,
+            body.sidebar-collapsed .sidebar-branch-sub { display: none !important; }
+
+            /* Center icon-only nav items */
+            body.sidebar-collapsed .nav-item {
+                justify-content: center;
+                padding: 10px;
+                margin: 2px 4px;
+                position: relative;
+            }
             body.sidebar-collapsed .nav-item .left-part { gap: 0; }
-            body.sidebar-collapsed .nav-item .icon { width: auto; font-size: 16px; }
+            body.sidebar-collapsed .nav-item .icon { width: auto; font-size: 17px; }
+
+            /* Center logo */
             body.sidebar-collapsed .sidebar-logo { justify-content: center; padding: 16px 10px; }
+
+            /* Shift header and main */
             body.sidebar-collapsed #header { left: 60px; }
             body.sidebar-collapsed #main { margin-left: 60px; }
+
+            /* Tooltip on hover for collapsed items */
+            body.sidebar-collapsed .nav-item[data-label]:hover::after {
+                content: attr(data-label);
+                position: absolute;
+                left: calc(100% + 10px);
+                top: 50%;
+                transform: translateY(-50%);
+                background: #1e293b;
+                color: #fff;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 6px 12px;
+                border-radius: 6px;
+                white-space: nowrap;
+                z-index: 9999;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+                pointer-events: none;
+            }
+            body.sidebar-collapsed .nav-item[data-label]:hover::before {
+                content: '';
+                position: absolute;
+                left: calc(100% + 4px);
+                top: 50%;
+                transform: translateY(-50%);
+                border: 5px solid transparent;
+                border-right-color: #1e293b;
+                z-index: 9999;
+                pointer-events: none;
+            }
+
+            /* Sub-items tooltip in collapsed mode */
+            body.sidebar-collapsed .sub-item[data-label]:hover::after {
+                content: attr(data-label);
+                position: absolute;
+                left: calc(100% + 10px);
+                top: 50%;
+                transform: translateY(-50%);
+                background: #1e293b;
+                color: #fff;
+                font-size: 12px;
+                font-weight: 600;
+                padding: 6px 12px;
+                border-radius: 6px;
+                white-space: nowrap;
+                z-index: 9999;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+                pointer-events: none;
+            }
         }
     </style>
 </head>
@@ -467,14 +539,14 @@
         $csp = $currentSubPage ?? '';
         ?>
 
-        <a href="<?= base_url('dashboard') ?>" class="nav-item <?= $cp==='dashboard'?'active':'' ?>">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-gauge-high"></i></span>Dashboard</div>
+        <a href="<?= base_url('dashboard') ?>" class="nav-item <?= $cp==='dashboard'?'active':'' ?>" data-label="Dashboard">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-gauge-high"></i></span><span class="nav-label">Dashboard</span></div>
         </a>
 
         <!-- Clients -->
         <?php $clientsOpen = in_array($cp, ['clients','customers']); ?>
-        <div class="nav-item <?= $clientsOpen?'open':'' ?>" onclick="toggleNav('clientsMenu',this)">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-users"></i></span>Clients</div>
+        <div class="nav-item <?= $clientsOpen?'open':'' ?>" onclick="toggleNav('clientsMenu',this)" data-label="Clients">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-users"></i></span><span class="nav-label">Clients</span></div>
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $clientsOpen?'open':'' ?>" id="clientsMenu">
@@ -488,8 +560,8 @@
 
         <!-- Billing -->
         <?php $billingOpen = $cp === 'billing'; ?>
-        <div class="nav-item <?= $billingOpen?'open':'' ?>" onclick="toggleNav('billingMenu',this)">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-file-invoice-dollar"></i></span>Billing</div>
+        <div class="nav-item <?= $billingOpen?'open':'' ?>" onclick="toggleNav('billingMenu',this)" data-label="Billing">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-file-invoice-dollar"></i></span><span class="nav-label">Billing</span></div>
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $billingOpen?'open':'' ?>" id="billingMenu">
@@ -503,8 +575,8 @@
 
         <!-- Reports -->
         <?php $reportsOpen = $cp === 'reports'; ?>
-        <div class="nav-item <?= $reportsOpen?'open':'' ?>" onclick="toggleNav('reportsMenu',this)">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span>Reports</div>
+        <div class="nav-item <?= $reportsOpen?'open':'' ?>" onclick="toggleNav('reportsMenu',this)" data-label="Reports">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-chart-bar"></i></span><span class="nav-label">Reports</span></div>
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $reportsOpen?'open':'' ?>" id="reportsMenu">
@@ -524,8 +596,8 @@
 
         <!-- Finance -->
         <?php $financeOpen = $cp === 'finance'; ?>
-        <div class="nav-item <?= $financeOpen?'open':'' ?>" onclick="toggleNav('financeMenu',this)">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-coins"></i></span>Finance</div>
+        <div class="nav-item <?= $financeOpen?'open':'' ?>" onclick="toggleNav('financeMenu',this)" data-label="Finance">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-coins"></i></span><span class="nav-label">Finance</span></div>
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $financeOpen?'open':'' ?>" id="financeMenu">
@@ -539,8 +611,8 @@
 
         <!-- Network -->
         <?php $netOpen = $cp === 'network' || $cp === 'monitoring'; ?>
-        <div class="nav-item <?= $netOpen?'open':'' ?>" onclick="toggleNav('netMenu',this)">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-server"></i></span>Network</div>
+        <div class="nav-item <?= $netOpen?'open':'' ?>" onclick="toggleNav('netMenu',this)" data-label="Network">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-server"></i></span><span class="nav-label">Network</span></div>
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $netOpen?'open':'' ?>" id="netMenu">
@@ -590,8 +662,8 @@
 
         <!-- OLT / GPON -->
         <?php $gponOpen = $cp === 'gpon'; ?>
-        <div class="nav-item <?= $gponOpen?'open':'' ?>" onclick="toggleNav('gponMenu',this)">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-tower-broadcast"></i></span>OLT / GPON</div>
+        <div class="nav-item <?= $gponOpen?'open':'' ?>" onclick="toggleNav('gponMenu',this)" data-label="OLT / GPON">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-tower-broadcast"></i></span><span class="nav-label">OLT / GPON</span></div>
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $gponOpen?'open':'' ?>" id="gponMenu">
@@ -611,8 +683,8 @@
 
         <!-- Inventory -->
         <?php $invOpen = $cp === 'inventory'; ?>
-        <div class="nav-item <?= $invOpen?'open':'' ?>" onclick="toggleNav('invMenu',this)">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-boxes-stacked"></i></span>Inventory</div>
+        <div class="nav-item <?= $invOpen?'open':'' ?>" onclick="toggleNav('invMenu',this)" data-label="Inventory">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-boxes-stacked"></i></span><span class="nav-label">Inventory</span></div>
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $invOpen?'open':'' ?>" id="invMenu">
@@ -622,20 +694,73 @@
             <a href="<?= base_url('inventory/purchases') ?>" class="sub-item <?= $csp==='purchases'?'active':'' ?>">
                 <i class="fa-solid fa-cart-shopping"></i> Purchase Orders
             </a>
+            <a href="<?= base_url('inventory/suppliers') ?>" class="sub-item <?= $csp==='suppliers'?'active':'' ?>">
+                <i class="fa-solid fa-truck"></i> Suppliers
+            </a>
         </div>
 
-        <a href="<?= base_url('workorders') ?>" class="nav-item <?= $cp==='workorders'?'active':'' ?>">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-clipboard-list"></i></span>Work Orders</div>
+        <a href="<?= base_url('workorders') ?>" class="nav-item <?= $cp==='workorders'?'active':'' ?>" data-label="Work Orders">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-clipboard-list"></i></span><span class="nav-label">Work Orders</span></div>
         </a>
 
-        <a href="<?= base_url('resellers') ?>" class="nav-item <?= $cp==='resellers'?'active':'' ?>">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-handshake"></i></span>Resellers</div>
-        </a>
+        <!-- HR & Payroll -->
+        <?php $hrOpen = $cp === 'hr'; ?>
+        <div class="nav-item <?= $hrOpen?'open':'' ?>" onclick="toggleNav('hrMenu',this)" data-label="HR & Payroll">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-user-tie"></i></span><span class="nav-label">HR &amp; Payroll</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $hrOpen?'open':'' ?>" id="hrMenu">
+            <a href="<?= base_url('hr/employees') ?>" class="sub-item <?= $csp==='employees'?'active':'' ?>">
+                <i class="fa-solid fa-users"></i> Employees
+            </a>
+            <a href="<?= base_url('hr/departments') ?>" class="sub-item <?= $csp==='departments'?'active':'' ?>">
+                <i class="fa-solid fa-sitemap"></i> Departments
+            </a>
+            <a href="<?= base_url('hr/attendance') ?>" class="sub-item <?= $csp==='attendance'?'active':'' ?>">
+                <i class="fa-solid fa-calendar-check"></i> Attendance
+            </a>
+            <a href="<?= base_url('hr/payroll') ?>" class="sub-item <?= $csp==='payroll'?'active':'' ?>">
+                <i class="fa-solid fa-money-bill-wave"></i> Payroll
+            </a>
+        </div>
+
+        <!-- Support & Ticketing -->
+        <?php $supportOpen = $cp === 'support'; ?>
+        <div class="nav-item <?= $supportOpen?'open':'' ?>" onclick="toggleNav('supportMenu',this)" data-label="Support">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-headset"></i></span><span class="nav-label">Support</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $supportOpen?'open':'' ?>" id="supportMenu">
+            <a href="<?= base_url('support/tickets') ?>" class="sub-item <?= $csp==='tickets'?'active':'' ?>">
+                <i class="fa-solid fa-ticket"></i> Tickets
+            </a>
+            <a href="<?= base_url('support/tickets/create') ?>" class="sub-item <?= $csp==='ticket-create'?'active':'' ?>">
+                <i class="fa-solid fa-plus"></i> New Ticket
+            </a>
+            <a href="<?= base_url('support/dashboard') ?>" class="sub-item <?= $csp==='dashboard'&&$cp==='support'?'active':'' ?>">
+                <i class="fa-solid fa-chart-bar"></i> SLA Dashboard
+            </a>
+        </div>
+
+        <!-- Resellers -->
+        <?php $resellerOpen = in_array($cp, ['resellers','mac-resellers']); ?>
+        <div class="nav-item <?= $resellerOpen?'open':'' ?>" onclick="toggleNav('resellerMenu',this)" data-label="Resellers">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-handshake"></i></span><span class="nav-label">Resellers</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $resellerOpen?'open':'' ?>" id="resellerMenu">
+            <a href="<?= base_url('resellers') ?>" class="sub-item <?= $cp==='resellers'?'active':'' ?>">
+                <i class="fa-solid fa-sitemap"></i> Resellers
+            </a>
+            <a href="<?= base_url('mac-resellers') ?>" class="sub-item <?= $cp==='mac-resellers'?'active':'' ?>">
+                <i class="fa-solid fa-network-wired"></i> MAC Resellers
+            </a>
+        </div>
 
         <!-- Automation -->
         <?php $autoOpen = $cp === 'automation'; ?>
-        <div class="nav-item <?= $autoOpen?'open':'' ?>" onclick="toggleNav('autoMenu',this)">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-robot"></i></span>Automation</div>
+        <div class="nav-item <?= $autoOpen?'open':'' ?>" onclick="toggleNav('autoMenu',this)" data-label="Automation">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-robot"></i></span><span class="nav-label">Automation</span></div>
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $autoOpen?'open':'' ?>" id="autoMenu">
@@ -649,8 +774,8 @@
 
         <!-- Communication Hub -->
         <?php $commsOpen = $cp === 'comms'; ?>
-        <div class="nav-item <?= $commsOpen?'open':'' ?>" onclick="toggleNav('commsMenu',this)">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-comments"></i></span>Communication</div>
+        <div class="nav-item <?= $commsOpen?'open':'' ?>" onclick="toggleNav('commsMenu',this)" data-label="Communication">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-comments"></i></span><span class="nav-label">Communication</span></div>
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $commsOpen?'open':'' ?>" id="commsMenu">
@@ -672,19 +797,24 @@
         </div>
 
         <!-- Settings -->
-        <a href="<?= base_url('settings') ?>" class="nav-item <?= $cp==='settings'?'active':'' ?>">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-sliders"></i></span>Settings</div>
+        <a href="<?= base_url('settings') ?>" class="nav-item <?= $cp==='settings'?'active':'' ?>" data-label="Settings">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-sliders"></i></span><span class="nav-label">Settings</span></div>
+        </a>
+
+        <!-- Roles & Permissions -->
+        <a href="<?= base_url('roles') ?>" class="nav-item <?= $cp==='roles'?'active':'' ?>" data-label="Roles & Permissions">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-shield-halved"></i></span><span class="nav-label">Roles & Permissions</span></div>
         </a>
 
     </div>
 
     <!-- Branch footer -->
-    <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);flex-shrink:0;background:#152236;">
+    <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,0.08);flex-shrink:0;background:#152236;overflow:hidden;">
         <div style="display:flex;align-items:center;gap:10px;">
             <div style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;"></div>
-            <div>
-                <div style="font-size:12px;font-weight:600;color:#fff;"><?= htmlspecialchars($_SESSION['branch_name'] ?? 'Head Office') ?></div>
-                <div style="font-size:10px;color:#94a3b8;">Active Branch</div>
+            <div class="sidebar-branch-name" style="min-width:0;">
+                <div style="font-size:12px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><?= htmlspecialchars($_SESSION['branch_name'] ?? 'Head Office') ?></div>
+                <div class="sidebar-branch-sub" style="font-size:10px;color:#94a3b8;">Active Branch</div>
             </div>
         </div>
     </div>
@@ -807,6 +937,20 @@ function closeSidebarMobile() {
 }
 
 function toggleNav(menuId, el) {
+    // If sidebar is collapsed on desktop, expand it first then open the submenu
+    if (window.innerWidth > 768 && document.body.classList.contains('sidebar-collapsed')) {
+        document.body.classList.remove('sidebar-collapsed');
+        localStorage.setItem('sidebarCollapsed', '0');
+        // Open the submenu after the transition
+        setTimeout(() => {
+            const submenu = document.getElementById(menuId);
+            document.querySelectorAll('#sidebarNav .submenu').forEach(m => m.classList.remove('open'));
+            document.querySelectorAll('#sidebarNav .nav-item').forEach(i => i.classList.remove('open'));
+            submenu.classList.add('open');
+            el.classList.add('open');
+        }, 260);
+        return;
+    }
     const submenu = document.getElementById(menuId);
     const opening = !submenu.classList.contains('open');
     document.querySelectorAll('#sidebarNav .submenu').forEach(m => m.classList.remove('open'));

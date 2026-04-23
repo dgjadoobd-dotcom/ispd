@@ -155,6 +155,75 @@
             <label class="form-label">Notes / Remarks</label>
             <textarea name="notes" class="form-input" rows="3" placeholder="Optional notes about this customer"></textarea>
         </div>
+
+        <!-- Extended Client Info -->
+        <div class="card fade-in" style="padding:20px;">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+                <i class="fa-solid fa-list-check" style="color:#f97316"></i> Additional Client Details
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div>
+                    <label class="form-label">MAC Address</label>
+                    <input type="text" name="mac_address" class="form-input" placeholder="AA:BB:CC:DD:EE:FF"
+                           oninput="this.value=this.value.toUpperCase()"
+                           value="<?= htmlspecialchars($_POST['mac_address'] ?? '') ?>">
+                </div>
+                <div>
+                    <label class="form-label">Client Type</label>
+                    <select name="client_type" class="form-input">
+                        <option value="home">Home</option>
+                        <option value="business">Business</option>
+                        <option value="corporate">Corporate</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label">Road No</label>
+                    <input type="text" name="road_no" class="form-input" placeholder="Road number"
+                           value="<?= htmlspecialchars($_POST['road_no'] ?? '') ?>">
+                </div>
+                <div>
+                    <label class="form-label">House No</label>
+                    <input type="text" name="house_no" class="form-input" placeholder="House number"
+                           value="<?= htmlspecialchars($_POST['house_no'] ?? '') ?>">
+                </div>
+                <div>
+                    <label class="form-label">Sub Zone</label>
+                    <input type="text" name="sub_zone" class="form-input" placeholder="Sub zone / area"
+                           value="<?= htmlspecialchars($_POST['sub_zone'] ?? '') ?>">
+                </div>
+                <div>
+                    <label class="form-label">Box No</label>
+                    <input type="text" name="box_no" class="form-input" placeholder="Distribution box"
+                           value="<?= htmlspecialchars($_POST['box_no'] ?? '') ?>">
+                </div>
+                <div>
+                    <label class="form-label">Thana</label>
+                    <input type="text" name="thana" class="form-input" placeholder="Thana / Upazila"
+                           value="<?= htmlspecialchars($_POST['thana'] ?? '') ?>">
+                </div>
+                <div>
+                    <label class="form-label">District</label>
+                    <input type="text" name="district" class="form-input" placeholder="District"
+                           value="<?= htmlspecialchars($_POST['district'] ?? '') ?>">
+                </div>
+                <div>
+                    <label class="form-label">Device Name</label>
+                    <input type="text" name="device_name" class="form-input" placeholder="e.g. TP-Link TL-WR840N"
+                           value="<?= htmlspecialchars($_POST['device_name'] ?? '') ?>">
+                </div>
+                <div>
+                    <label class="form-label">Device Purchase Date</label>
+                    <input type="date" name="device_purchase_date" class="form-input"
+                           value="<?= htmlspecialchars($_POST['device_purchase_date'] ?? '') ?>">
+                </div>
+                <div style="grid-column:1/-1;">
+                    <label class="form-label">Assigned Employee</label>
+                    <input type="text" name="assigned_employee" class="form-input" placeholder="Employee name or ID"
+                           value="<?= htmlspecialchars($_POST['assigned_employee'] ?? '') ?>">
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- RIGHT: Charges + Location -->

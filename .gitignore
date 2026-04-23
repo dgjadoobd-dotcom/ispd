@@ -14,6 +14,7 @@
 
 # ── Uploads & Storage ────────────────────────────────────────────
 /public/assets/uploads/
+/public/uploads/
 /storage/
 /tmp/
 *.log
@@ -25,10 +26,12 @@ Thumbs.db
 /.vscode/
 *.swp
 *.swo
+*~
 
-# ── Cache ────────────────────────────────────────────────────────
+# ── Cache & Test Artifacts ───────────────────────────────────────
 .phpunit.cache/
 /coverage/
+/coverage-html/
 
 # ── One-time setup & test scripts ────────────────────────────────
 check_users.php
@@ -38,33 +41,26 @@ create_radius_tables.php
 init_sqlite.php
 migrate.php
 reset_password.php
-migrate_selfhosted_piprapay.php
 public/test_db_connection.php
 public/test_packages.php
 public/test_profiles.php
 database/migrate_olt.php
-setup-dev.php
-setup-development.sh
-test-dev-env.php
-test-dev-setup.php
-test-env.sh
-_setup.php
 
-# ── IDE & Kiro workspace files ────────────────────────────────────
+# ── Kiro workspace files ─────────────────────────────────────────
 .kiro/
-.phpunit.cache/
 
-# ── Third-party / sub-products ────────────────────────────────────
+# ── Third-party / sub-products ───────────────────────────────────
 paybill/
 
-# ── Internal ops / dev docs ───────────────────────────────────────
+# ── Internal ops / dev docs ──────────────────────────────────────
 ops/
 DEVELOPMENT.md
-ENVIRONMENT_SETUP.md
 
-# ── Windows-only local scripts ────────────────────────────────────
-scripts/windows/
-
-# ── Sensitive notes ───────────────────────────────────────────────
+# ── Sensitive files ───────────────────────────────────────────────
 note.txt
+notes.txt
 *.bak
+*.backup
+*.orig
+credentials.txt
+passwords.txt

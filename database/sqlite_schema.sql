@@ -173,6 +173,18 @@ CREATE TABLE IF NOT EXISTS customers (
     created_by INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Extended client fields (from client list)
+    mac_address VARCHAR(20),
+    road_no VARCHAR(50),
+    house_no VARCHAR(50),
+    sub_zone VARCHAR(100),
+    box_no VARCHAR(50),
+    client_type TEXT DEFAULT 'home',
+    thana VARCHAR(100),
+    district VARCHAR(100),
+    device_name VARCHAR(100),
+    device_purchase_date DATE,
+    assigned_employee VARCHAR(100),
     -- Customer Portal Columns
     portal_active INTEGER DEFAULT 0,
     portal_password VARCHAR(255),
@@ -703,6 +715,85 @@ CREATE TABLE IF NOT EXISTS reseller_transactions (
 );
 
 -- ============================================================
+-- MAC RESELLER SYSTEM
+-- ============================================================
+CREATE TABLE IF NOT EXISTS mac_resellers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    branch_id INTEGER,
+    business_name VARCHAR(150) NOT NULL,
+    contact_person VARCHAR(100) NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    email VARCHAR(150),
+    address TEXT,
+    balance DECIMAL(12,2) DEFAULT 0.00,
+    credit_limit DECIMAL(12,2) DEFAULT 0.00,
+    commission_rate DECIMAL(5,2) DEFAULT 0.00,
+    status TEXT DEFAULT 'active',
+    joined_date DATE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (branch_id) REFERENCES branches(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS mac_reseller_tariffs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mac_reseller_id INTEGER NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    speed_download INTEGER DEFAULT 0,
+    speed_upload INTEGER DEFAULT 0,
+    daily_rate DECIMAL(10,2) DEFAULT 0.00,
+    monthly_rate DECIMAL(10,2) DEFAULT 0.00,
+    is_active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (mac_reseller_id) REFERENCES mac_resellers(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS mac_reseller_clients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mac_reseller_id INTEGER NOT NULL,
+    tariff_id INTEGER,
+    full_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(20),
+    mac_address VARCHAR(17) NOT NULL,
+    ip_address VARCHAR(45),
+    balance DECIMAL(10,2) DEFAULT 0.00,
+    status TEXT DEFAULT 'active',
+    joined_date DATE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (mac_reseller_id) REFERENCES mac_resellers(id) ON DELETE CASCADE,
+    FOREIGN KEY (tariff_id) REFERENCES mac_reseller_tariffs(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS mac_reseller_billing (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mac_reseller_id INTEGER NOT NULL,
+    client_id INTEGER NOT NULL,
+    billing_date DATE NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    status TEXT DEFAULT 'unpaid',
+    paid_at TIMESTAMP NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (mac_reseller_id) REFERENCES mac_resellers(id),
+    FOREIGN KEY (client_id) REFERENCES mac_reseller_clients(id)
+);
+
+CREATE TABLE IF NOT EXISTS mac_reseller_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mac_reseller_id INTEGER NOT NULL,
+    transaction_type TEXT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    balance_before DECIMAL(10,2),
+    balance_after DECIMAL(10,2),
+    reference VARCHAR(100),
+    notes TEXT,
+    performed_by INTEGER,
+    transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (mac_reseller_id) REFERENCES mac_resellers(id)
+);
+
+-- ============================================================
 -- WORK ORDERS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS technicians (
@@ -1128,6 +1219,58 @@ CREATE TABLE IF NOT EXISTS support_ticket_replies (
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
     FOREIGN KEY (staff_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
+
+-- ============================================================
+-- SUPPORT MODULE EXTENDED TABLES
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS problem_categories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ticket_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL,
+    user_id INTEGER,
+    author_name VARCHAR(100),
+    message TEXT NOT NULL,
+    is_internal INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS ticket_assignments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL,
+    assigned_to INTEGER,
+    assigned_by INTEGER,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT,
+    FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS sla_violations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ticket_id INTEGER NOT NULL UNIQUE,
+    priority VARCHAR(20),
+    sla_deadline TIMESTAMP,
+    violated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    resolution_time_minutes INTEGER,
+    FOREIGN KEY (ticket_id) REFERENCES support_tickets(id) ON DELETE CASCADE
+);
+
+-- Default problem categories seed data
+INSERT OR IGNORE INTO problem_categories (name, description, is_active) VALUES
+('no_connection',    'Customer has no internet connection',          1),
+('slow_speed',       'Customer experiencing slow internet speed',    1),
+('billing_dispute',  'Customer has a billing or payment dispute',    1),
+('hardware_fault',   'Hardware or equipment fault reported',         1),
+('new_request',      'New service or feature request',               1),
+('other',            'Other / miscellaneous issue',                  1);
 
 CREATE TABLE IF NOT EXISTS payment_transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

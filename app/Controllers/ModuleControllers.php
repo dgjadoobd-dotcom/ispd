@@ -799,6 +799,7 @@ class ResellerController {
 
     public function create(): void {
         $pageTitle = 'Add Reseller'; $currentPage = 'resellers'; $currentSubPage = 'reseller-create';
+        $reseller  = null; // no existing record — create mode
         $branches  = $this->db->fetchAll("SELECT id,name FROM branches WHERE is_active=1");
         $zones     = $this->db->fetchAll("SELECT id,name FROM zones WHERE is_active=1");
         $parents   = $this->db->fetchAll("SELECT id,contact_person,business_name FROM resellers WHERE status='active'");
@@ -807,79 +808,188 @@ class ResellerController {
     }
 
     public function store(): void {
-        $this->db->insert('resellers', [
-            'branch_id'       => (int)$_POST['branch_id'],
-            'zone_id'         => (int)$_POST['zone_id'] ?: null,
-            'parent_reseller_id' => (int)$_POST['parent_reseller_id'] ?: null,
-            'business_name'   => sanitize($_POST['business_name'] ?? ''),
-            'contact_person'  => sanitize($_POST['contact_person'] ?? ''),
-            'phone'           => sanitize($_POST['phone'] ?? ''),
-            'email'           => sanitize($_POST['email'] ?? ''),
-            'address'         => sanitize($_POST['address'] ?? ''),
-            'commission_rate' => (float)($_POST['commission_rate'] ?? 0),
-            'credit_limit'    => (float)($_POST['credit_limit'] ?? 0),
-            'status'          => 'active',
-            'joined_date'     => date('Y-m-d'),
-        ]);
-        redirect(base_url('resellers'));
+        $businessName = sanitize($_POST['business_name'] ?? '');
+        $phone        = sanitize($_POST['phone'] ?? '');
+        $contact      = sanitize($_POST['contact_person'] ?? '');
+        $branchId     = (int)($_POST['branch_id'] ?? 0);
+
+        $errors = [];
+        if (empty($businessName)) $errors[] = 'Business name is required.';
+        if (empty($contact))      $errors[] = 'Contact person is required.';
+        if (empty($phone))        $errors[] = 'Phone number is required.';
+
+        if ($errors) {
+            $_SESSION['error'] = implode(' ', $errors);
+            redirect(base_url('resellers/create'));
+            return;
+        }
+
+        // Check for duplicate phone
+        $existing = $this->db->fetchOne("SELECT id FROM resellers WHERE phone=?", [$phone]);
+        if ($existing) {
+            $_SESSION['error'] = "A reseller with phone '{$phone}' already exists.";
+            redirect(base_url('resellers/create'));
+            return;
+        }
+
+        try {
+            $newId = $this->db->insert('resellers', [
+                'branch_id'          => $branchId ?: null,
+                'zone_id'            => (int)($_POST['zone_id'] ?? 0) ?: null,
+                'parent_reseller_id' => (int)($_POST['parent_reseller_id'] ?? 0) ?: null,
+                'business_name'      => $businessName,
+                'contact_person'     => $contact,
+                'phone'              => $phone,
+                'email'              => sanitize($_POST['email'] ?? ''),
+                'address'            => sanitize($_POST['address'] ?? ''),
+                'commission_rate'    => max(0, min(100, (float)($_POST['commission_rate'] ?? 0))),
+                'credit_limit'       => max(0, (float)($_POST['credit_limit'] ?? 0)),
+                'balance'            => 0,
+                'status'             => 'active',
+                'joined_date'        => date('Y-m-d'),
+            ]);
+            $_SESSION['success'] = "Reseller '{$businessName}' created successfully.";
+            redirect(base_url("resellers/view/{$newId}"));
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Failed to create reseller. Please try again.';
+            redirect(base_url('resellers/create'));
+        }
     }
 
     public function view(string $id): void {
         $pageTitle = 'Reseller Detail'; $currentPage = 'resellers';
-        $reseller = $this->db->fetchOne("SELECT r.*, b.name as branch_name FROM resellers r LEFT JOIN branches b ON b.id=r.branch_id WHERE r.id=?", [$id]);
-        if (!$reseller) { http_response_code(404); die('Not found'); }
-        $transactions = $this->db->fetchAll("SELECT * FROM reseller_transactions WHERE reseller_id=? ORDER BY transaction_date DESC LIMIT 20", [$id]);
-        $customers    = $this->db->fetchAll("SELECT id,customer_code,full_name,status FROM customers WHERE reseller_id=? LIMIT 20", [$id]);
+        $reseller = $this->db->fetchOne(
+            "SELECT r.*, b.name as branch_name, z.name as zone_name,
+                    pr.business_name as parent_name
+             FROM resellers r
+             LEFT JOIN branches b ON b.id=r.branch_id
+             LEFT JOIN zones z ON z.id=r.zone_id
+             LEFT JOIN resellers pr ON pr.id=r.parent_reseller_id
+             WHERE r.id=?", [$id]
+        );
+        if (!$reseller) {
+            $_SESSION['error'] = 'Reseller not found.';
+            redirect(base_url('resellers'));
+            return;
+        }
+        $transactions = $this->db->fetchAll(
+            "SELECT *, COALESCE(transaction_date, created_at) as tx_date
+             FROM reseller_transactions WHERE reseller_id=? ORDER BY id DESC LIMIT 50", [$id]
+        );
+        $customers = $this->db->fetchAll(
+            "SELECT id, customer_code, full_name, status, phone FROM customers WHERE reseller_id=? ORDER BY created_at DESC LIMIT 30", [$id]
+        );
+        $customerCount = $this->db->fetchOne("SELECT COUNT(*) as cnt FROM customers WHERE reseller_id=?", [$id]);
+        $reseller['customer_count'] = $customerCount['cnt'] ?? 0;
         $viewFile = BASE_PATH . '/views/reseller/view.php';
         require_once BASE_PATH . '/views/layouts/main.php';
     }
 
     public function topup(string $id): void {
         $reseller = $this->db->fetchOne("SELECT * FROM resellers WHERE id=?", [$id]);
-        $amount   = (float)($_POST['amount'] ?? 0);
-        if ($amount <= 0) { redirect(base_url("resellers/view/{$id}")); }
-        $newBal = $reseller['balance'] + $amount;
-        $this->db->update('resellers', ['balance' => $newBal], 'id=?', [$id]);
-        $this->db->insert('reseller_transactions', [
-            'reseller_id'      => $id,
-            'transaction_type' => 'topup',
-            'amount'           => $amount,
-            'balance_before'   => $reseller['balance'],
-            'balance_after'    => $newBal,
-            'notes'            => sanitize($_POST['notes'] ?? ''),
-            'performed_by'     => $_SESSION['user_id'],
-        ]);
+        if (!$reseller) {
+            $_SESSION['error'] = 'Reseller not found.';
+            redirect(base_url('resellers'));
+            return;
+        }
+        $amount = (float)($_POST['amount'] ?? 0);
+        if ($amount <= 0) {
+            $_SESSION['error'] = 'Top-up amount must be greater than zero.';
+            redirect(base_url("resellers/view/{$id}"));
+            return;
+        }
+        try {
+            $newBal = $reseller['balance'] + $amount;
+            $this->db->update('resellers', ['balance' => $newBal], 'id=?', [$id]);
+            $this->db->insert('reseller_transactions', [
+                'reseller_id'      => $id,
+                'transaction_type' => 'topup',
+                'amount'           => $amount,
+                'balance_before'   => $reseller['balance'],
+                'balance_after'    => $newBal,
+                'notes'            => sanitize($_POST['notes'] ?? ''),
+                'performed_by'     => $_SESSION['user_id'] ?? null,
+                'transaction_date' => date('Y-m-d H:i:s'),
+            ]);
+            $_SESSION['success'] = '৳' . number_format($amount, 2) . ' topped up successfully.';
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Top-up failed. Please try again.';
+        }
         redirect(base_url("resellers/view/{$id}"));
     }
 
     public function edit(string $id): void {
         $pageTitle = 'Edit Reseller'; $currentPage = 'resellers';
         $reseller  = $this->db->fetchOne("SELECT * FROM resellers WHERE id=?", [$id]);
-        if (!$reseller) { http_response_code(404); die('Not found'); }
+        if (!$reseller) {
+            $_SESSION['error'] = 'Reseller not found.';
+            redirect(base_url('resellers'));
+            return;
+        }
         $branches  = $this->db->fetchAll("SELECT id,name FROM branches WHERE is_active=1");
         $zones     = $this->db->fetchAll("SELECT id,name FROM zones WHERE is_active=1");
+        $parents   = $this->db->fetchAll("SELECT id,contact_person,business_name FROM resellers WHERE status='active' AND id!=?", [$id]);
         $viewFile  = BASE_PATH . '/views/reseller/create.php';
         require_once BASE_PATH . '/views/layouts/main.php';
     }
 
     public function update(string $id): void {
-        $this->db->update('resellers', [
-            'branch_id'       => (int)$_POST['branch_id'],
-            'zone_id'         => (int)$_POST['zone_id'] ?: null,
-            'business_name'   => sanitize($_POST['business_name'] ?? ''),
-            'contact_person'  => sanitize($_POST['contact_person'] ?? ''),
-            'phone'           => sanitize($_POST['phone'] ?? ''),
-            'email'           => sanitize($_POST['email'] ?? ''),
-            'address'         => sanitize($_POST['address'] ?? ''),
-            'commission_rate' => (float)($_POST['commission_rate'] ?? 0),
-            'credit_limit'    => (float)($_POST['credit_limit'] ?? 0),
-            'status'          => sanitize($_POST['status'] ?? 'active'),
-        ], 'id=?', [$id]);
-        redirect(base_url("resellers/view/{$id}"));
+        $reseller = $this->db->fetchOne("SELECT * FROM resellers WHERE id=?", [$id]);
+        if (!$reseller) {
+            $_SESSION['error'] = 'Reseller not found.';
+            redirect(base_url('resellers'));
+            return;
+        }
+
+        $businessName = sanitize($_POST['business_name'] ?? '');
+        $contact      = sanitize($_POST['contact_person'] ?? '');
+        $phone        = sanitize($_POST['phone'] ?? '');
+
+        $errors = [];
+        if (empty($businessName)) $errors[] = 'Business name is required.';
+        if (empty($contact))      $errors[] = 'Contact person is required.';
+        if (empty($phone))        $errors[] = 'Phone number is required.';
+
+        if ($errors) {
+            $_SESSION['error'] = implode(' ', $errors);
+            redirect(base_url("resellers/edit/{$id}"));
+            return;
+        }
+
+        // Check duplicate phone (excluding self)
+        $existing = $this->db->fetchOne("SELECT id FROM resellers WHERE phone=? AND id!=?", [$phone, $id]);
+        if ($existing) {
+            $_SESSION['error'] = "Another reseller with phone '{$phone}' already exists.";
+            redirect(base_url("resellers/edit/{$id}"));
+            return;
+        }
+
+        try {
+            $this->db->update('resellers', [
+                'branch_id'          => (int)($_POST['branch_id'] ?? 0) ?: null,
+                'zone_id'            => (int)($_POST['zone_id'] ?? 0) ?: null,
+                'parent_reseller_id' => (int)($_POST['parent_reseller_id'] ?? 0) ?: null,
+                'business_name'      => $businessName,
+                'contact_person'     => $contact,
+                'phone'              => $phone,
+                'email'              => sanitize($_POST['email'] ?? ''),
+                'address'            => sanitize($_POST['address'] ?? ''),
+                'commission_rate'    => max(0, min(100, (float)($_POST['commission_rate'] ?? 0))),
+                'credit_limit'       => max(0, (float)($_POST['credit_limit'] ?? 0)),
+                'status'             => in_array($_POST['status'] ?? '', ['active','suspended','inactive']) ? $_POST['status'] : 'active',
+            ], 'id=?', [$id]);
+            $_SESSION['success'] = "Reseller '{$businessName}' updated successfully.";
+            redirect(base_url("resellers/view/{$id}"));
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Failed to update reseller. Please try again.';
+            redirect(base_url("resellers/edit/{$id}"));
+        }
     }
 
     public function delete(string $id): void {
+        $reseller = $this->db->fetchOne("SELECT business_name FROM resellers WHERE id=?", [$id]);
         $this->db->update('resellers', ['status' => 'inactive'], 'id=?', [$id]);
+        $_SESSION['success'] = ($reseller ? "'{$reseller['business_name']}'" : 'Reseller') . ' has been deactivated.';
         redirect(base_url('resellers'));
     }
 }
@@ -1019,6 +1129,41 @@ class InventoryController {
     public function deletePO(string $id): void {
         $this->db->update('purchase_orders', ['status' => 'cancelled'], 'id=?', [$id]);
         redirect(base_url('inventory/purchases'));
+    }
+
+    public function suppliers(): void {
+        $pageTitle = 'Suppliers'; $currentPage = 'inventory'; $currentSubPage = 'suppliers';
+        $suppliers = $this->db->fetchAll("SELECT * FROM suppliers ORDER BY name");
+        $viewFile  = BASE_PATH . '/views/inventory/suppliers.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    public function storeSupplier(): void {
+        $this->db->insert('suppliers', [
+            'name'      => sanitize($_POST['name'] ?? ''),
+            'contact_person' => sanitize($_POST['contact_person'] ?? ''),
+            'phone'     => sanitize($_POST['phone'] ?? ''),
+            'email'     => sanitize($_POST['email'] ?? ''),
+            'address'   => sanitize($_POST['address'] ?? ''),
+            'is_active' => 1,
+        ]);
+        redirect(base_url('inventory/suppliers'));
+    }
+
+    public function updateSupplier(string $id): void {
+        $this->db->update('suppliers', [
+            'name'      => sanitize($_POST['name'] ?? ''),
+            'contact_person' => sanitize($_POST['contact_person'] ?? ''),
+            'phone'     => sanitize($_POST['phone'] ?? ''),
+            'email'     => sanitize($_POST['email'] ?? ''),
+            'address'   => sanitize($_POST['address'] ?? ''),
+        ], 'id=?', [$id]);
+        redirect(base_url('inventory/suppliers'));
+    }
+
+    public function deleteSupplier(string $id): void {
+        $this->db->update('suppliers', ['is_active' => 0], 'id=?', [$id]);
+        redirect(base_url('inventory/suppliers'));
     }
 }
 
@@ -1226,17 +1371,21 @@ class SettingsController {
     }
 
     public function saveReseller(): void {
-        $fields = [
-            'reseller_panel_enabled', 'reseller_portal_name', 'reseller_support_phone', 
-            'reseller_support_email', 'reseller_login_text', 'reseller_theme_color'
+        // Checkbox fields default to '0' when unchecked (not sent in POST)
+        $data = [
+            'reseller_panel_enabled' => isset($_POST['reseller_panel_enabled']) ? '1' : '0',
+            'reseller_portal_name'   => sanitize($_POST['reseller_portal_name'] ?? ''),
+            'reseller_support_phone' => sanitize($_POST['reseller_support_phone'] ?? ''),
+            'reseller_support_email' => sanitize($_POST['reseller_support_email'] ?? ''),
+            'reseller_login_text'    => sanitize($_POST['reseller_login_text'] ?? ''),
+            'reseller_theme_color'   => preg_match('/^#[0-9a-fA-F]{6}$/', $_POST['reseller_theme_color'] ?? '') ? $_POST['reseller_theme_color'] : '#3b82f6',
         ];
-        foreach ($fields as $f) {
-            $val = sanitize($_POST[$f] ?? '');
-            $exists = $this->db->fetchOne("SELECT id FROM settings WHERE `key`=?", [$f]);
-            if ($exists) { $this->db->update('settings', ['value'=>$val], '`key`=?', [$f]); }
-            else { $this->db->insert('settings', ['key'=>$f,'value'=>$val]); }
+        foreach ($data as $key => $val) {
+            $exists = $this->db->fetchOne("SELECT id FROM settings WHERE `key`=?", [$key]);
+            if ($exists) { $this->db->update('settings', ['value' => $val], '`key`=?', [$key]); }
+            else { $this->db->insert('settings', ['key' => $key, 'value' => $val]); }
         }
-        $_SESSION['success'] = "Reseller panel settings updated and portals synchronized.";
+        $_SESSION['success'] = 'Reseller panel settings saved successfully.';
         redirect(base_url('settings#reseller'));
     }
 
@@ -1676,5 +1825,876 @@ class SettingsController {
 
         $viewFile = BASE_PATH . '/views/settings/config-page.php';
         require_once BASE_PATH . '/views/layouts/main.php';
+    }
+}
+
+class MacResellerController {
+    private Database $db;
+
+    public function __construct() {
+        $this->db = Database::getInstance();
+        $this->ensureTables();
+    }
+
+    /** Create MAC reseller tables if they don't exist yet (SQLite auto-migration). */
+    private function ensureTables(): void {
+        try {
+            $this->db->query("SELECT 1 FROM mac_resellers LIMIT 1");
+        } catch (\Exception $e) {
+            $this->db->query("CREATE TABLE IF NOT EXISTS mac_resellers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                branch_id INTEGER,
+                business_name VARCHAR(150) NOT NULL,
+                contact_person VARCHAR(100) NOT NULL,
+                phone VARCHAR(20) NOT NULL,
+                email VARCHAR(150),
+                address TEXT,
+                balance DECIMAL(12,2) DEFAULT 0.00,
+                credit_limit DECIMAL(12,2) DEFAULT 0.00,
+                commission_rate DECIMAL(5,2) DEFAULT 0.00,
+                status TEXT DEFAULT 'active',
+                joined_date DATE,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+            $this->db->query("CREATE TABLE IF NOT EXISTS mac_reseller_tariffs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mac_reseller_id INTEGER NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                speed_download INTEGER DEFAULT 0,
+                speed_upload INTEGER DEFAULT 0,
+                daily_rate DECIMAL(10,2) DEFAULT 0.00,
+                monthly_rate DECIMAL(10,2) DEFAULT 0.00,
+                is_active INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+            $this->db->query("CREATE TABLE IF NOT EXISTS mac_reseller_clients (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mac_reseller_id INTEGER NOT NULL,
+                tariff_id INTEGER,
+                full_name VARCHAR(150) NOT NULL,
+                phone VARCHAR(20),
+                mac_address VARCHAR(17) NOT NULL,
+                ip_address VARCHAR(45),
+                balance DECIMAL(10,2) DEFAULT 0.00,
+                status TEXT DEFAULT 'active',
+                joined_date DATE,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+            $this->db->query("CREATE TABLE IF NOT EXISTS mac_reseller_billing (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mac_reseller_id INTEGER NOT NULL,
+                client_id INTEGER NOT NULL,
+                billing_date DATE NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                status TEXT DEFAULT 'unpaid',
+                paid_at TIMESTAMP NULL,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+            $this->db->query("CREATE TABLE IF NOT EXISTS mac_reseller_transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mac_reseller_id INTEGER NOT NULL,
+                transaction_type TEXT NOT NULL,
+                amount DECIMAL(10,2) NOT NULL,
+                balance_before DECIMAL(10,2),
+                balance_after DECIMAL(10,2),
+                reference VARCHAR(100),
+                notes TEXT,
+                performed_by INTEGER,
+                transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )");
+        }
+    }
+
+    // ── List ──────────────────────────────────────────────────────
+    public function index(): void {
+        $pageTitle = 'MAC Resellers'; $currentPage = 'mac-resellers'; $currentSubPage = 'mac-reseller-list';
+        $resellers = $this->db->fetchAll(
+            "SELECT r.*, b.name as branch_name,
+                    (SELECT COUNT(*) FROM mac_reseller_clients c WHERE c.mac_reseller_id=r.id) as client_count,
+                    (SELECT COUNT(*) FROM mac_reseller_clients c WHERE c.mac_reseller_id=r.id AND c.status='active') as active_clients
+             FROM mac_resellers r
+             LEFT JOIN branches b ON b.id=r.branch_id
+             ORDER BY r.created_at DESC"
+        );
+        $viewFile = BASE_PATH . '/views/mac-reseller/list.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    // ── Create form ───────────────────────────────────────────────
+    public function create(): void {
+        $pageTitle = 'Add MAC Reseller'; $currentPage = 'mac-resellers'; $currentSubPage = 'mac-reseller-create';
+        $reseller  = null;
+        $branches  = $this->db->fetchAll("SELECT id,name FROM branches WHERE is_active=1");
+        $viewFile  = BASE_PATH . '/views/mac-reseller/create.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    // ── Store ─────────────────────────────────────────────────────
+    public function store(): void {
+        $businessName = sanitize($_POST['business_name'] ?? '');
+        $contact      = sanitize($_POST['contact_person'] ?? '');
+        $phone        = sanitize($_POST['phone'] ?? '');
+
+        $errors = [];
+        if (empty($businessName)) $errors[] = 'Business name is required.';
+        if (empty($contact))      $errors[] = 'Contact person is required.';
+        if (empty($phone))        $errors[] = 'Phone number is required.';
+
+        if ($errors) {
+            $_SESSION['error'] = implode(' ', $errors);
+            redirect(base_url('mac-resellers/create'));
+            return;
+        }
+
+        $dup = $this->db->fetchOne("SELECT id FROM mac_resellers WHERE phone=?", [$phone]);
+        if ($dup) {
+            $_SESSION['error'] = "A MAC reseller with phone '{$phone}' already exists.";
+            redirect(base_url('mac-resellers/create'));
+            return;
+        }
+
+        try {
+            $newId = $this->db->insert('mac_resellers', [
+                'branch_id'       => (int)($_POST['branch_id'] ?? 0) ?: null,
+                'business_name'   => $businessName,
+                'contact_person'  => $contact,
+                'phone'           => $phone,
+                'email'           => sanitize($_POST['email'] ?? ''),
+                'address'         => sanitize($_POST['address'] ?? ''),
+                'commission_rate' => max(0, min(100, (float)($_POST['commission_rate'] ?? 0))),
+                'credit_limit'    => max(0, (float)($_POST['credit_limit'] ?? 0)),
+                'balance'         => 0,
+                'status'          => 'active',
+                'joined_date'     => date('Y-m-d'),
+                'notes'           => sanitize($_POST['notes'] ?? ''),
+            ]);
+            $_SESSION['success'] = "MAC Reseller '{$businessName}' created successfully.";
+            redirect(base_url("mac-resellers/view/{$newId}"));
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Failed to create MAC reseller. Please try again.';
+            redirect(base_url('mac-resellers/create'));
+        }
+    }
+
+    // ── View detail ───────────────────────────────────────────────
+    public function view(string $id): void {
+        $pageTitle = 'MAC Reseller Detail'; $currentPage = 'mac-resellers';
+        $reseller = $this->db->fetchOne(
+            "SELECT r.*, b.name as branch_name
+             FROM mac_resellers r
+             LEFT JOIN branches b ON b.id=r.branch_id
+             WHERE r.id=?", [$id]
+        );
+        if (!$reseller) {
+            $_SESSION['error'] = 'MAC Reseller not found.';
+            redirect(base_url('mac-resellers'));
+            return;
+        }
+        $tariffs = $this->db->fetchAll(
+            "SELECT * FROM mac_reseller_tariffs WHERE mac_reseller_id=? ORDER BY name", [$id]
+        );
+        $clients = $this->db->fetchAll(
+            "SELECT c.*, t.name as tariff_name, t.daily_rate
+             FROM mac_reseller_clients c
+             LEFT JOIN mac_reseller_tariffs t ON t.id=c.tariff_id
+             WHERE c.mac_reseller_id=? ORDER BY c.created_at DESC LIMIT 30", [$id]
+        );
+        $clientCount = $this->db->fetchOne(
+            "SELECT COUNT(*) as total,
+                    SUM(CASE WHEN status='active' THEN 1 ELSE 0 END) as active_count
+             FROM mac_reseller_clients WHERE mac_reseller_id=?", [$id]
+        );
+        $transactions = $this->db->fetchAll(
+            "SELECT * FROM mac_reseller_transactions WHERE mac_reseller_id=? ORDER BY id DESC LIMIT 50", [$id]
+        );
+        // Today's billing summary
+        $todayBilling = $this->db->fetchOne(
+            "SELECT COALESCE(SUM(amount),0) as total_billed,
+                    COALESCE(SUM(CASE WHEN status='paid' THEN amount ELSE 0 END),0) as total_collected
+             FROM mac_reseller_billing WHERE mac_reseller_id=? AND billing_date=?", [$id, date('Y-m-d')]
+        );
+        $reseller['client_count']  = $clientCount['total'] ?? 0;
+        $reseller['active_clients'] = $clientCount['active_count'] ?? 0;
+        $viewFile = BASE_PATH . '/views/mac-reseller/view.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    // ── Edit form ─────────────────────────────────────────────────
+    public function edit(string $id): void {
+        $pageTitle = 'Edit MAC Reseller'; $currentPage = 'mac-resellers';
+        $reseller  = $this->db->fetchOne("SELECT * FROM mac_resellers WHERE id=?", [$id]);
+        if (!$reseller) {
+            $_SESSION['error'] = 'MAC Reseller not found.';
+            redirect(base_url('mac-resellers'));
+            return;
+        }
+        $branches = $this->db->fetchAll("SELECT id,name FROM branches WHERE is_active=1");
+        $viewFile = BASE_PATH . '/views/mac-reseller/create.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    // ── Update ────────────────────────────────────────────────────
+    public function update(string $id): void {
+        $reseller = $this->db->fetchOne("SELECT * FROM mac_resellers WHERE id=?", [$id]);
+        if (!$reseller) {
+            $_SESSION['error'] = 'MAC Reseller not found.';
+            redirect(base_url('mac-resellers'));
+            return;
+        }
+
+        $businessName = sanitize($_POST['business_name'] ?? '');
+        $contact      = sanitize($_POST['contact_person'] ?? '');
+        $phone        = sanitize($_POST['phone'] ?? '');
+
+        $errors = [];
+        if (empty($businessName)) $errors[] = 'Business name is required.';
+        if (empty($contact))      $errors[] = 'Contact person is required.';
+        if (empty($phone))        $errors[] = 'Phone number is required.';
+
+        if ($errors) {
+            $_SESSION['error'] = implode(' ', $errors);
+            redirect(base_url("mac-resellers/edit/{$id}"));
+            return;
+        }
+
+        $dup = $this->db->fetchOne("SELECT id FROM mac_resellers WHERE phone=? AND id!=?", [$phone, $id]);
+        if ($dup) {
+            $_SESSION['error'] = "Another MAC reseller with phone '{$phone}' already exists.";
+            redirect(base_url("mac-resellers/edit/{$id}"));
+            return;
+        }
+
+        try {
+            $this->db->update('mac_resellers', [
+                'branch_id'       => (int)($_POST['branch_id'] ?? 0) ?: null,
+                'business_name'   => $businessName,
+                'contact_person'  => $contact,
+                'phone'           => $phone,
+                'email'           => sanitize($_POST['email'] ?? ''),
+                'address'         => sanitize($_POST['address'] ?? ''),
+                'commission_rate' => max(0, min(100, (float)($_POST['commission_rate'] ?? 0))),
+                'credit_limit'    => max(0, (float)($_POST['credit_limit'] ?? 0)),
+                'status'          => in_array($_POST['status'] ?? '', ['active','suspended','inactive']) ? $_POST['status'] : 'active',
+                'notes'           => sanitize($_POST['notes'] ?? ''),
+            ], 'id=?', [$id]);
+            $_SESSION['success'] = "MAC Reseller '{$businessName}' updated successfully.";
+            redirect(base_url("mac-resellers/view/{$id}"));
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Failed to update. Please try again.';
+            redirect(base_url("mac-resellers/edit/{$id}"));
+        }
+    }
+
+    // ── Delete (deactivate) ───────────────────────────────────────
+    public function delete(string $id): void {
+        $r = $this->db->fetchOne("SELECT business_name FROM mac_resellers WHERE id=?", [$id]);
+        $this->db->update('mac_resellers', ['status' => 'inactive'], 'id=?', [$id]);
+        $_SESSION['success'] = ($r ? "'{$r['business_name']}'" : 'MAC Reseller') . ' has been deactivated.';
+        redirect(base_url('mac-resellers'));
+    }
+
+    // ── Top-up balance ────────────────────────────────────────────
+    public function topup(string $id): void {
+        $reseller = $this->db->fetchOne("SELECT * FROM mac_resellers WHERE id=?", [$id]);
+        if (!$reseller) {
+            $_SESSION['error'] = 'MAC Reseller not found.';
+            redirect(base_url('mac-resellers'));
+            return;
+        }
+        $amount = (float)($_POST['amount'] ?? 0);
+        if ($amount <= 0) {
+            $_SESSION['error'] = 'Top-up amount must be greater than zero.';
+            redirect(base_url("mac-resellers/view/{$id}"));
+            return;
+        }
+        try {
+            $newBal = $reseller['balance'] + $amount;
+            $this->db->update('mac_resellers', ['balance' => $newBal], 'id=?', [$id]);
+            $this->db->insert('mac_reseller_transactions', [
+                'mac_reseller_id'  => $id,
+                'transaction_type' => 'topup',
+                'amount'           => $amount,
+                'balance_before'   => $reseller['balance'],
+                'balance_after'    => $newBal,
+                'notes'            => sanitize($_POST['notes'] ?? ''),
+                'performed_by'     => $_SESSION['user_id'] ?? null,
+                'transaction_date' => date('Y-m-d H:i:s'),
+            ]);
+            $_SESSION['success'] = '৳' . number_format($amount, 2) . ' topped up successfully.';
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Top-up failed. Please try again.';
+        }
+        redirect(base_url("mac-resellers/view/{$id}"));
+    }
+
+    // ── Tariff plans ──────────────────────────────────────────────
+    public function tariffs(string $id): void {
+        $pageTitle = 'Tariff Plans'; $currentPage = 'mac-resellers';
+        $reseller = $this->db->fetchOne("SELECT * FROM mac_resellers WHERE id=?", [$id]);
+        if (!$reseller) { redirect(base_url('mac-resellers')); return; }
+        $tariffs  = $this->db->fetchAll(
+            "SELECT t.*, (SELECT COUNT(*) FROM mac_reseller_clients c WHERE c.tariff_id=t.id) as client_count
+             FROM mac_reseller_tariffs t WHERE t.mac_reseller_id=? ORDER BY t.name", [$id]
+        );
+        $viewFile = BASE_PATH . '/views/mac-reseller/tariffs.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    public function storeTariff(string $id): void {
+        $name = sanitize($_POST['name'] ?? '');
+        if (empty($name)) {
+            $_SESSION['error'] = 'Tariff name is required.';
+            redirect(base_url("mac-resellers/{$id}/tariffs"));
+            return;
+        }
+        $this->db->insert('mac_reseller_tariffs', [
+            'mac_reseller_id' => $id,
+            'name'            => $name,
+            'speed_download'  => (int)($_POST['speed_download'] ?? 0),
+            'speed_upload'    => (int)($_POST['speed_upload'] ?? 0),
+            'daily_rate'      => max(0, (float)($_POST['daily_rate'] ?? 0)),
+            'monthly_rate'    => max(0, (float)($_POST['monthly_rate'] ?? 0)),
+            'is_active'       => 1,
+        ]);
+        $_SESSION['success'] = "Tariff '{$name}' added.";
+        redirect(base_url("mac-resellers/{$id}/tariffs"));
+    }
+
+    public function updateTariff(string $tid): void {
+        $tariff = $this->db->fetchOne("SELECT * FROM mac_reseller_tariffs WHERE id=?", [$tid]);
+        if (!$tariff) { redirect(base_url('mac-resellers')); return; }
+        $this->db->update('mac_reseller_tariffs', [
+            'name'           => sanitize($_POST['name'] ?? ''),
+            'speed_download' => (int)($_POST['speed_download'] ?? 0),
+            'speed_upload'   => (int)($_POST['speed_upload'] ?? 0),
+            'daily_rate'     => max(0, (float)($_POST['daily_rate'] ?? 0)),
+            'monthly_rate'   => max(0, (float)($_POST['monthly_rate'] ?? 0)),
+            'is_active'      => isset($_POST['is_active']) ? 1 : 0,
+        ], 'id=?', [$tid]);
+        $_SESSION['success'] = 'Tariff updated.';
+        redirect(base_url("mac-resellers/{$tariff['mac_reseller_id']}/tariffs"));
+    }
+
+    public function deleteTariff(string $tid): void {
+        $tariff = $this->db->fetchOne("SELECT * FROM mac_reseller_tariffs WHERE id=?", [$tid]);
+        if (!$tariff) { redirect(base_url('mac-resellers')); return; }
+        $inUse = $this->db->fetchOne("SELECT id FROM mac_reseller_clients WHERE tariff_id=? LIMIT 1", [$tid]);
+        if ($inUse) {
+            $_SESSION['error'] = 'Cannot delete tariff — it is assigned to one or more clients.';
+        } else {
+            $this->db->delete('mac_reseller_tariffs', 'id=?', [$tid]);
+            $_SESSION['success'] = 'Tariff deleted.';
+        }
+        redirect(base_url("mac-resellers/{$tariff['mac_reseller_id']}/tariffs"));
+    }
+
+    // ── Clients ───────────────────────────────────────────────────
+    public function clients(string $id): void {
+        $pageTitle = 'MAC Clients'; $currentPage = 'mac-resellers';
+        $reseller = $this->db->fetchOne("SELECT * FROM mac_resellers WHERE id=?", [$id]);
+        if (!$reseller) { redirect(base_url('mac-resellers')); return; }
+        $clients = $this->db->fetchAll(
+            "SELECT c.*, t.name as tariff_name, t.daily_rate, t.monthly_rate
+             FROM mac_reseller_clients c
+             LEFT JOIN mac_reseller_tariffs t ON t.id=c.tariff_id
+             WHERE c.mac_reseller_id=? ORDER BY c.full_name", [$id]
+        );
+        $tariffs = $this->db->fetchAll(
+            "SELECT * FROM mac_reseller_tariffs WHERE mac_reseller_id=? AND is_active=1 ORDER BY name", [$id]
+        );
+        $viewFile = BASE_PATH . '/views/mac-reseller/clients.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    public function storeClient(string $id): void {
+        $fullName   = sanitize($_POST['full_name'] ?? '');
+        $macAddress = strtoupper(trim($_POST['mac_address'] ?? ''));
+
+        $errors = [];
+        if (empty($fullName))   $errors[] = 'Full name is required.';
+        if (empty($macAddress)) $errors[] = 'MAC address is required.';
+        if (!preg_match('/^([0-9A-F]{2}[:\-]){5}[0-9A-F]{2}$/', $macAddress)) {
+            $errors[] = 'Invalid MAC address format (e.g. AA:BB:CC:DD:EE:FF).';
+        }
+
+        if ($errors) {
+            $_SESSION['error'] = implode(' ', $errors);
+            redirect(base_url("mac-resellers/{$id}/clients"));
+            return;
+        }
+
+        $dup = $this->db->fetchOne("SELECT id FROM mac_reseller_clients WHERE mac_address=?", [$macAddress]);
+        if ($dup) {
+            $_SESSION['error'] = "MAC address '{$macAddress}' is already registered.";
+            redirect(base_url("mac-resellers/{$id}/clients"));
+            return;
+        }
+
+        $this->db->insert('mac_reseller_clients', [
+            'mac_reseller_id' => $id,
+            'tariff_id'       => (int)($_POST['tariff_id'] ?? 0) ?: null,
+            'full_name'       => $fullName,
+            'phone'           => sanitize($_POST['phone'] ?? ''),
+            'mac_address'     => $macAddress,
+            'ip_address'      => sanitize($_POST['ip_address'] ?? ''),
+            'balance'         => 0,
+            'status'          => 'active',
+            'joined_date'     => date('Y-m-d'),
+            'notes'           => sanitize($_POST['notes'] ?? ''),
+        ]);
+        $_SESSION['success'] = "Client '{$fullName}' added.";
+        redirect(base_url("mac-resellers/{$id}/clients"));
+    }
+
+    public function updateClient(string $cid): void {
+        $client = $this->db->fetchOne("SELECT * FROM mac_reseller_clients WHERE id=?", [$cid]);
+        if (!$client) { redirect(base_url('mac-resellers')); return; }
+
+        $macAddress = strtoupper(trim($_POST['mac_address'] ?? ''));
+        if (!preg_match('/^([0-9A-F]{2}[:\-]){5}[0-9A-F]{2}$/', $macAddress)) {
+            $_SESSION['error'] = 'Invalid MAC address format.';
+            redirect(base_url("mac-resellers/{$client['mac_reseller_id']}/clients"));
+            return;
+        }
+        $dup = $this->db->fetchOne("SELECT id FROM mac_reseller_clients WHERE mac_address=? AND id!=?", [$macAddress, $cid]);
+        if ($dup) {
+            $_SESSION['error'] = "MAC address '{$macAddress}' is already registered to another client.";
+            redirect(base_url("mac-resellers/{$client['mac_reseller_id']}/clients"));
+            return;
+        }
+
+        $this->db->update('mac_reseller_clients', [
+            'tariff_id'   => (int)($_POST['tariff_id'] ?? 0) ?: null,
+            'full_name'   => sanitize($_POST['full_name'] ?? ''),
+            'phone'       => sanitize($_POST['phone'] ?? ''),
+            'mac_address' => $macAddress,
+            'ip_address'  => sanitize($_POST['ip_address'] ?? ''),
+            'status'      => in_array($_POST['status'] ?? '', ['active','suspended','inactive']) ? $_POST['status'] : 'active',
+            'notes'       => sanitize($_POST['notes'] ?? ''),
+        ], 'id=?', [$cid]);
+        $_SESSION['success'] = 'Client updated.';
+        redirect(base_url("mac-resellers/{$client['mac_reseller_id']}/clients"));
+    }
+
+    public function deleteClient(string $cid): void {
+        $client = $this->db->fetchOne("SELECT * FROM mac_reseller_clients WHERE id=?", [$cid]);
+        if (!$client) { redirect(base_url('mac-resellers')); return; }
+        $this->db->delete('mac_reseller_clients', 'id=?', [$cid]);
+        $_SESSION['success'] = 'Client removed.';
+        redirect(base_url("mac-resellers/{$client['mac_reseller_id']}/clients"));
+    }
+
+    public function suspendClient(string $cid): void {
+        $client = $this->db->fetchOne("SELECT * FROM mac_reseller_clients WHERE id=?", [$cid]);
+        if (!$client) { redirect(base_url('mac-resellers')); return; }
+        $newStatus = $client['status'] === 'active' ? 'suspended' : 'active';
+        $this->db->update('mac_reseller_clients', ['status' => $newStatus], 'id=?', [$cid]);
+        $_SESSION['success'] = "Client " . ($newStatus === 'active' ? 'reactivated' : 'suspended') . ".";
+        redirect(base_url("mac-resellers/{$client['mac_reseller_id']}/clients"));
+    }
+
+    // ── Billing ───────────────────────────────────────────────────
+    public function billing(string $id): void {
+        $pageTitle = 'Billing'; $currentPage = 'mac-resellers';
+        $reseller = $this->db->fetchOne("SELECT * FROM mac_resellers WHERE id=?", [$id]);
+        if (!$reseller) { redirect(base_url('mac-resellers')); return; }
+        $date = sanitize($_GET['date'] ?? date('Y-m-d'));
+        $bills = $this->db->fetchAll(
+            "SELECT b.*, c.full_name, c.mac_address, t.name as tariff_name
+             FROM mac_reseller_billing b
+             JOIN mac_reseller_clients c ON c.id=b.client_id
+             LEFT JOIN mac_reseller_tariffs t ON t.id=c.tariff_id
+             WHERE b.mac_reseller_id=? AND b.billing_date=?
+             ORDER BY c.full_name", [$id, $date]
+        );
+        $summary = $this->db->fetchOne(
+            "SELECT COALESCE(SUM(amount),0) as total_billed,
+                    COALESCE(SUM(CASE WHEN status='paid' THEN amount ELSE 0 END),0) as total_collected,
+                    COUNT(*) as total_records,
+                    SUM(CASE WHEN status='paid' THEN 1 ELSE 0 END) as paid_count
+             FROM mac_reseller_billing WHERE mac_reseller_id=? AND billing_date=?", [$id, $date]
+        );
+        $viewFile = BASE_PATH . '/views/mac-reseller/billing.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    public function generateBilling(string $id): void {
+        $reseller = $this->db->fetchOne("SELECT * FROM mac_resellers WHERE id=?", [$id]);
+        if (!$reseller) { redirect(base_url('mac-resellers')); return; }
+
+        $date = sanitize($_POST['billing_date'] ?? date('Y-m-d'));
+        $activeClients = $this->db->fetchAll(
+            "SELECT c.*, t.daily_rate FROM mac_reseller_clients c
+             LEFT JOIN mac_reseller_tariffs t ON t.id=c.tariff_id
+             WHERE c.mac_reseller_id=? AND c.status='active'", [$id]
+        );
+
+        $generated = 0;
+        $skipped   = 0;
+        foreach ($activeClients as $client) {
+            $exists = $this->db->fetchOne(
+                "SELECT id FROM mac_reseller_billing WHERE client_id=? AND billing_date=?",
+                [$client['id'], $date]
+            );
+            if ($exists) { $skipped++; continue; }
+            $rate = (float)($client['daily_rate'] ?? 0);
+            if ($rate <= 0) { $skipped++; continue; }
+            $this->db->insert('mac_reseller_billing', [
+                'mac_reseller_id' => $id,
+                'client_id'       => $client['id'],
+                'billing_date'    => $date,
+                'amount'          => $rate,
+                'status'          => 'unpaid',
+            ]);
+            $generated++;
+        }
+        $_SESSION['success'] = "{$generated} billing records generated for {$date}." . ($skipped ? " {$skipped} skipped (already exists or no tariff)." : '');
+        redirect(base_url("mac-resellers/{$id}/billing?date={$date}"));
+    }
+
+    public function payBilling(string $bid): void {
+        $bill = $this->db->fetchOne("SELECT * FROM mac_reseller_billing WHERE id=?", [$bid]);
+        if (!$bill) { redirect(base_url('mac-resellers')); return; }
+        if ($bill['status'] === 'paid') {
+            $_SESSION['error'] = 'This bill is already paid.';
+            redirect(base_url("mac-resellers/{$bill['mac_reseller_id']}/billing"));
+            return;
+        }
+        $this->db->update('mac_reseller_billing', [
+            'status'  => 'paid',
+            'paid_at' => date('Y-m-d H:i:s'),
+        ], 'id=?', [$bid]);
+        $_SESSION['success'] = 'Bill marked as paid.';
+        redirect(base_url("mac-resellers/{$bill['mac_reseller_id']}/billing?date={$bill['billing_date']}"));
+    }
+}
+
+class RoleController {
+    private Database $db;
+
+    public function __construct() {
+        $this->db = Database::getInstance();
+        // Ensure permissions are seeded on first access
+        $this->ensureSeeded();
+    }
+
+    private function ensureSeeded(): void {
+        $count = $this->db->fetchOne("SELECT COUNT(*) as c FROM permissions");
+        if (($count['c'] ?? 0) == 0) {
+            PermissionHelper::seedDefaultPermissions();
+        }
+    }
+
+    // ── List all roles ────────────────────────────────────────────
+    public function index(): void {
+        $this->requireSuperAdmin();
+        $pageTitle = 'Roles & Permissions'; $currentPage = 'roles';
+
+        $roles = $this->db->fetchAll(
+            "SELECT r.*,
+                    (SELECT COUNT(*) FROM users u WHERE u.role_id = r.id) as user_count,
+                    (SELECT COUNT(*) FROM role_permissions rp WHERE rp.role_id = r.id) as perm_count
+             FROM roles r ORDER BY r.id ASC"
+        );
+
+        $totalPermissions = $this->db->fetchOne("SELECT COUNT(*) as c FROM permissions")['c'] ?? 0;
+        $totalUsers       = $this->db->fetchOne("SELECT COUNT(*) as c FROM users WHERE is_active=1")['c'] ?? 0;
+
+        $viewFile = BASE_PATH . '/views/roles/index.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    // ── Create form ───────────────────────────────────────────────
+    public function create(): void {
+        $this->requireSuperAdmin();
+        $pageTitle = 'Create Role'; $currentPage = 'roles';
+        $role = null;
+        $rolePermissions = [];
+        $modules = PermissionHelper::MODULE_PERMISSIONS;
+        $viewFile = BASE_PATH . '/views/roles/form.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    // ── Store new role ────────────────────────────────────────────
+    public function store(): void {
+        $this->requireSuperAdmin();
+
+        $name        = strtolower(trim(preg_replace('/[^a-z0-9_]/', '_', sanitize($_POST['name'] ?? ''))));
+        $displayName = sanitize($_POST['display_name'] ?? '');
+        $description = sanitize($_POST['description'] ?? '');
+
+        if (empty($name) || empty($displayName)) {
+            $_SESSION['error'] = 'Role name and display name are required.';
+            redirect(base_url('roles/create'));
+            return;
+        }
+
+        $dup = $this->db->fetchOne("SELECT id FROM roles WHERE name=?", [$name]);
+        if ($dup) {
+            $_SESSION['error'] = "Role '{$name}' already exists.";
+            redirect(base_url('roles/create'));
+            return;
+        }
+
+        try {
+            $roleId = $this->db->insert('roles', [
+                'name'         => $name,
+                'display_name' => $displayName,
+                'description'  => $description,
+            ]);
+            // Save permissions if provided
+            $this->saveRolePermissions($roleId, $_POST['permissions'] ?? []);
+            $_SESSION['success'] = "Role '{$displayName}' created successfully.";
+            redirect(base_url("roles/edit/{$roleId}"));
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Failed to create role: ' . $e->getMessage();
+            redirect(base_url('roles/create'));
+        }
+    }
+
+    // ── Edit form ─────────────────────────────────────────────────
+    public function edit(string $id): void {
+        $this->requireSuperAdmin();
+        $pageTitle = 'Edit Role'; $currentPage = 'roles';
+
+        $role = $this->db->fetchOne("SELECT * FROM roles WHERE id=?", [$id]);
+        if (!$role) {
+            $_SESSION['error'] = 'Role not found.';
+            redirect(base_url('roles'));
+            return;
+        }
+
+        $rolePermissions = array_column(
+            $this->db->fetchAll(
+                "SELECT p.name FROM permissions p
+                 JOIN role_permissions rp ON rp.permission_id = p.id
+                 WHERE rp.role_id=?", [$id]
+            ),
+            'name'
+        );
+
+        $modules = PermissionHelper::MODULE_PERMISSIONS;
+        $viewFile = BASE_PATH . '/views/roles/form.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    // ── Update role ───────────────────────────────────────────────
+    public function update(string $id): void {
+        $this->requireSuperAdmin();
+
+        $role = $this->db->fetchOne("SELECT * FROM roles WHERE id=?", [$id]);
+        if (!$role) {
+            $_SESSION['error'] = 'Role not found.';
+            redirect(base_url('roles'));
+            return;
+        }
+
+        // Protect superadmin name
+        if ($role['name'] === 'superadmin') {
+            $displayName = sanitize($_POST['display_name'] ?? $role['display_name']);
+            $description = sanitize($_POST['description'] ?? '');
+            $this->db->update('roles', ['display_name' => $displayName, 'description' => $description], 'id=?', [$id]);
+            // Superadmin always gets ALL permissions
+            $allPerms = array_column($this->db->fetchAll("SELECT name FROM permissions"), 'name');
+            $this->saveRolePermissions((int)$id, $allPerms);
+            $_SESSION['success'] = 'Superadmin role updated (all permissions enforced).';
+            redirect(base_url("roles/edit/{$id}"));
+            return;
+        }
+
+        $name        = strtolower(trim(preg_replace('/[^a-z0-9_]/', '_', sanitize($_POST['name'] ?? ''))));
+        $displayName = sanitize($_POST['display_name'] ?? '');
+        $description = sanitize($_POST['description'] ?? '');
+
+        if (empty($name) || empty($displayName)) {
+            $_SESSION['error'] = 'Role name and display name are required.';
+            redirect(base_url("roles/edit/{$id}"));
+            return;
+        }
+
+        $dup = $this->db->fetchOne("SELECT id FROM roles WHERE name=? AND id!=?", [$name, $id]);
+        if ($dup) {
+            $_SESSION['error'] = "Role name '{$name}' is already taken.";
+            redirect(base_url("roles/edit/{$id}"));
+            return;
+        }
+
+        try {
+            $this->db->update('roles', [
+                'name'         => $name,
+                'display_name' => $displayName,
+                'description'  => $description,
+            ], 'id=?', [$id]);
+
+            $this->saveRolePermissions((int)$id, $_POST['permissions'] ?? []);
+
+            // Log the change
+            $this->db->insert('activity_logs', [
+                'user_id'    => $_SESSION['user_id'] ?? null,
+                'action'     => 'role_updated',
+                'module'     => 'roles',
+                'record_id'  => $id,
+                'old_values' => json_encode($role),
+                'new_values' => json_encode(['name' => $name, 'display_name' => $displayName]),
+                'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '',
+            ]);
+
+            $_SESSION['success'] = "Role '{$displayName}' updated successfully.";
+            redirect(base_url("roles/edit/{$id}"));
+        } catch (\Exception $e) {
+            $_SESSION['error'] = 'Failed to update role.';
+            redirect(base_url("roles/edit/{$id}"));
+        }
+    }
+
+    // ── Save permissions for a role ───────────────────────────────
+    public function savePermissions(string $id): void {
+        $this->requireSuperAdmin();
+        $role = $this->db->fetchOne("SELECT * FROM roles WHERE id=?", [$id]);
+        if (!$role) { redirect(base_url('roles')); return; }
+
+        $this->saveRolePermissions((int)$id, $_POST['permissions'] ?? []);
+        $_SESSION['success'] = "Permissions for '{$role['display_name']}' saved.";
+        redirect(base_url("roles/edit/{$id}"));
+    }
+
+    // ── Delete role ───────────────────────────────────────────────
+    public function delete(string $id): void {
+        $this->requireSuperAdmin();
+
+        $role = $this->db->fetchOne("SELECT * FROM roles WHERE id=?", [$id]);
+        if (!$role) {
+            $_SESSION['error'] = 'Role not found.';
+            redirect(base_url('roles'));
+            return;
+        }
+
+        if (in_array($role['name'], ['superadmin', 'comadmin'], true)) {
+            $_SESSION['error'] = "The '{$role['name']}' role cannot be deleted.";
+            redirect(base_url('roles'));
+            return;
+        }
+
+        $userCount = $this->db->fetchOne("SELECT COUNT(*) as c FROM users WHERE role_id=?", [$id])['c'] ?? 0;
+        if ($userCount > 0) {
+            $_SESSION['error'] = "Cannot delete role — {$userCount} user(s) are assigned to it. Reassign them first.";
+            redirect(base_url('roles'));
+            return;
+        }
+
+        $this->db->delete('role_permissions', 'role_id=?', [$id]);
+        $this->db->delete('roles', 'id=?', [$id]);
+        $_SESSION['success'] = "Role '{$role['display_name']}' deleted.";
+        redirect(base_url('roles'));
+    }
+
+    // ── Users assigned to a role ──────────────────────────────────
+    public function users(string $id): void {
+        $this->requireSuperAdmin();
+        $pageTitle = 'Role Users'; $currentPage = 'roles';
+
+        $role = $this->db->fetchOne("SELECT * FROM roles WHERE id=?", [$id]);
+        if (!$role) { redirect(base_url('roles')); return; }
+
+        $users = $this->db->fetchAll(
+            "SELECT u.*, b.name as branch_name FROM users u
+             LEFT JOIN branches b ON b.id=u.branch_id
+             WHERE u.role_id=? ORDER BY u.full_name", [$id]
+        );
+        $allRoles = $this->db->fetchAll("SELECT id, display_name FROM roles ORDER BY display_name");
+        $viewFile = BASE_PATH . '/views/roles/users.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    // ── Assign user to role ───────────────────────────────────────
+    public function assignUser(): void {
+        $this->requireSuperAdmin();
+
+        $userId = (int)($_POST['user_id'] ?? 0);
+        $roleId = (int)($_POST['role_id'] ?? 0);
+
+        if (!$userId || !$roleId) {
+            $_SESSION['error'] = 'Invalid user or role.';
+            redirect(base_url('roles'));
+            return;
+        }
+
+        $user = $this->db->fetchOne("SELECT id, full_name, role_id FROM users WHERE id=?", [$userId]);
+        $role = $this->db->fetchOne("SELECT id, display_name FROM roles WHERE id=?", [$roleId]);
+
+        if (!$user || !$role) {
+            $_SESSION['error'] = 'User or role not found.';
+            redirect(base_url('roles'));
+            return;
+        }
+
+        $oldRoleId = $user['role_id'];
+        $this->db->update('users', ['role_id' => $roleId], 'id=?', [$userId]);
+
+        // Reload permissions in session if this is the current user
+        if (($userId) === ($_SESSION['user_id'] ?? 0)) {
+            PermissionHelper::loadUserPermissions($userId);
+        }
+
+        // Log the change
+        $this->db->insert('activity_logs', [
+            'user_id'    => $_SESSION['user_id'] ?? null,
+            'action'     => 'user_role_changed',
+            'module'     => 'roles',
+            'record_id'  => $userId,
+            'old_values' => json_encode(['role_id' => $oldRoleId]),
+            'new_values' => json_encode(['role_id' => $roleId, 'role_name' => $role['display_name']]),
+            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '',
+        ]);
+
+        $_SESSION['success'] = "{$user['full_name']} assigned to '{$role['display_name']}' role.";
+        $ref = $_POST['redirect'] ?? base_url("roles/users/{$roleId}");
+        redirect($ref);
+    }
+
+    // ── Seed default permissions ──────────────────────────────────
+    public function seed(): void {
+        $this->requireSuperAdmin();
+        PermissionHelper::seedDefaultPermissions();
+        $_SESSION['success'] = 'Default roles and permissions seeded successfully.';
+        redirect(base_url('roles'));
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────
+    private function saveRolePermissions(int $roleId, array $permissionNames): void {
+        // Delete existing
+        $this->db->delete('role_permissions', 'role_id=?', [$roleId]);
+
+        if (empty($permissionNames)) return;
+
+        // Re-insert selected
+        foreach ($permissionNames as $permName) {
+            $perm = $this->db->fetchOne("SELECT id FROM permissions WHERE name=?", [sanitize($permName)]);
+            if ($perm) {
+                try {
+                    $this->db->insert('role_permissions', [
+                        'role_id'       => $roleId,
+                        'permission_id' => $perm['id'],
+                    ]);
+                } catch (\Exception $e) {
+                    // Ignore duplicate key errors
+                }
+            }
+        }
+    }
+
+    private function requireSuperAdmin(): void {
+        if (!isset($_SESSION['user_id'])) {
+            redirect(base_url('login'));
+            return;
+        }
+        $role = $_SESSION['user_role'] ?? '';
+        if (!in_array($role, ['superadmin', 'comadmin'], true)) {
+            $_SESSION['error'] = 'Access denied. Only Super Admin can manage roles.';
+            redirect(base_url('dashboard'));
+        }
     }
 }

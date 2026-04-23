@@ -138,6 +138,17 @@ class Database {
                 "ALTER TABLE customers ADD COLUMN auto_payment_enabled INTEGER DEFAULT 0",
                 "ALTER TABLE customers ADD COLUMN last_online_at DATETIME NULL",
                 "ALTER TABLE customers ADD COLUMN current_ip VARCHAR(45) NULL",
+                "ALTER TABLE customers ADD COLUMN mac_address VARCHAR(20) NULL",
+                "ALTER TABLE customers ADD COLUMN road_no VARCHAR(50) NULL",
+                "ALTER TABLE customers ADD COLUMN house_no VARCHAR(50) NULL",
+                "ALTER TABLE customers ADD COLUMN sub_zone VARCHAR(100) NULL",
+                "ALTER TABLE customers ADD COLUMN box_no VARCHAR(50) NULL",
+                "ALTER TABLE customers ADD COLUMN client_type TEXT DEFAULT 'home'",
+                "ALTER TABLE customers ADD COLUMN thana VARCHAR(100) NULL",
+                "ALTER TABLE customers ADD COLUMN district VARCHAR(100) NULL",
+                "ALTER TABLE customers ADD COLUMN device_name VARCHAR(100) NULL",
+                "ALTER TABLE customers ADD COLUMN device_purchase_date DATE NULL",
+                "ALTER TABLE customers ADD COLUMN assigned_employee VARCHAR(100) NULL",
             ],
             'mac_bindings' => [
                 "ALTER TABLE mac_bindings ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
@@ -147,6 +158,12 @@ class Database {
                 "ALTER TABLE onus ADD COLUMN previous_snapshot TEXT NULL",
                 "ALTER TABLE onus ADD COLUMN deregister_reason VARCHAR(200) NULL",
                 "ALTER TABLE onus ADD COLUMN olt_id INTEGER NULL",
+            ],
+            'support_tickets' => [
+                "ALTER TABLE support_tickets ADD COLUMN sla_deadline DATETIME NULL",
+                "ALTER TABLE support_tickets ADD COLUMN sla_breached INTEGER DEFAULT 0",
+                "ALTER TABLE support_tickets ADD COLUMN category_id INTEGER NULL",
+                "ALTER TABLE support_tickets ADD COLUMN resolution_notes TEXT NULL",
             ],
         ];
 
