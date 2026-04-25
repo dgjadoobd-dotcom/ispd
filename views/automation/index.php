@@ -101,6 +101,25 @@
             </form>
         </div>
 
+        <!-- Manual Bulk Unlock -->
+        <div class="card" style="padding:20px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                <div style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-unlock" style="color:var(--blue);font-size:18px;"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700;font-size:14px;">Manual Bulk Unlock</div>
+                    <div style="font-size:12px;color:var(--text2);">Reconnect ALL suspended customers (no payment check)</div>
+                </div>
+            </div>
+            <form method="POST" action="<?= base_url('automation/run/unlock-all') ?>">
+                <button type="submit" class="btn btn-primary btn-sm"
+                        onclick="return confirm('UNLOCK ALL suspended customers?\n\nThis will reconnect everyone including those with unpaid invoices.\n\nAre you sure?')">
+                    <i class="fa-solid fa-unlock"></i> Unlock All (<?= $stats['suspended'] ?>)
+                </button>
+            </form>
+        </div>
+
         <!-- Due Reminders -->
         <div class="card" style="padding:20px;">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">

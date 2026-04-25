@@ -216,6 +216,42 @@ class AutomationService {
         return $this->log('auto_reconnection', $reconnected, "Reconnected {$reconnected} customers");
     }
 
+    // ── 3b. Manual Bulk Unlock ────────────────────────────────────
+    /**
+     * Unlock ALL suspended customers (manual bulk unlock - no payment check)
+     */
+    public function unlockAllSuspended(): array {
+        // Get count before
+        $before = $this->db->fetchOne("SELECT COUNT(*) as c FROM customers WHERE status='suspended'");
+        $count = $before['c'] ?? 0;
+
+        if ($count === 0) {
+            return $this->log('bulk_unlock', 0, "No suspended customers to unlock");
+        }
+
+        // Get all suspended
+        $suspended = $this->db->fetchAll("SELECT id, full_name, pppoe_username FROM customers WHERE status='suspended'");
+
+        $unlocked = 0;
+        foreach ($suspended as $c) {
+            // Update status
+            $this->db->update('customers', ['status' => 'active'], 'id=?', [$c['id']]);
+            
+            // Log status change
+            $this->db->insert('customer_status_log', [
+                'customer_id' => $c['id'],
+                'old_status'  => 'suspended',
+                'new_status'  => 'active',
+                'reason'      => 'Manual bulk unlock',
+                'changed_by'  => $_SESSION['user_id'] ?? null,
+            ]);
+            
+            $unlocked++;
+        }
+
+        return $this->log('bulk_unlock', $unlocked, "Bulk unlocked {$unlocked} customers");
+    }
+
     // ── 4. Due Reminder SMS ───────────────────────────────────────
     /**
      * Send SMS reminders to customers with invoices due within $daysAhead days.

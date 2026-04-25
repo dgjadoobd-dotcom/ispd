@@ -32,6 +32,7 @@ class AutomationController {
             'invoices'    => $this->automation->generateMonthlyInvoices(),
             'suspend'     => $this->automation->suspendOverdue((int)($_POST['grace_days'] ?? 0)),
             'reconnect'   => $this->automation->reconnectPaidCustomers(),
+            'unlock-all' => $this->automation->unlockAllSuspended(),
             'due-reminders'    => $this->automation->sendDueReminders((int)($_POST['days_ahead'] ?? 3)),
             'expiry-reminders' => $this->automation->sendExpiryReminders((int)($_POST['days_ahead'] ?? 5)),
             default       => ['success' => false, 'message' => 'Unknown job'],
