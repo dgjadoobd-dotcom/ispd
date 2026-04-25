@@ -11,11 +11,23 @@ class AiService {
         $this->enabled = (bool)env('AI_ENABLED', false);
         $this->baseUrl = rtrim(env('AI_BASE_URL', 'http://localhost:11434/api'), '/');
         $this->model   = env('AI_MODEL', 'gemma4:latest');
-        $this->timeout = (int)env('AI_TIMEOUT', 30);
+        $this->timeout = (int)env('AI_TIMEOUT', 60);
 
         // Auto-detect API type from base URL
         // Ollama native: .../api   |  OpenAI-compat: .../v1
         $this->apiType = str_ends_with($this->baseUrl, '/api') ? 'ollama' : 'openai';
+    }
+
+    public function getBaseUrl(): string {
+        return $this->baseUrl;
+    }
+    
+    public function getModel(): string {
+        return $this->model;
+    }
+    
+    public function getApiType(): string {
+        return $this->apiType;
     }
 
     /**

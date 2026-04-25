@@ -468,6 +468,8 @@ Router::prefix('/settings', function() {
     Router::post('/app', 'SettingsController@saveApp', ['AuthMiddleware']);
     Router::post('/ai', 'SettingsController@saveAi', ['AuthMiddleware']);
     Router::get('/ai/test', 'SettingsController@testAi', ['AuthMiddleware']);
+    Router::get('/ai/models', 'SettingsController@testAi', ['AuthMiddleware']);
+    Router::get('/supabase/test', 'SettingsController@testSupabase', ['AuthMiddleware']);
     Router::post('/reseller', 'SettingsController@saveReseller', ['AuthMiddleware']);
     Router::post('/packages/store', 'SettingsController@storePackage', ['AuthMiddleware']);
     Router::post('/packages/update', 'SettingsController@updatePackage', ['AuthMiddleware']);

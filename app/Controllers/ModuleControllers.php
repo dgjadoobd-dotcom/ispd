@@ -1357,8 +1357,25 @@ class SettingsController {
 
     public function testAi(): void {
         require_once BASE_PATH . '/app/Services/AiService.php';
-        $ai     = new AiService();
+        $ai = new AiService();
+        
         $result = $ai->testConnection();
+        
+        // If Ollama, also check available models
+        if ($result['ok']) {
+            $result['message'] = 'AI service is running!';
+            $result['ollama_url'] = $ai->getBaseUrl();
+            $result['model'] = $ai->getModel();
+            $result['instructions'] = 'Install more models: ollama pull gemma4';
+        }
+        
+        jsonResponse($result);
+    }
+    
+    public function testSupabase(): void {
+        require_once BASE_PATH . '/app/Services/SupabaseService.php';
+        $supabase = new SupabaseService();
+        $result = $supabase->testConnection();
         jsonResponse($result);
     }
 
