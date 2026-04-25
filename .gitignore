@@ -1,7 +1,51 @@
-# ── Environment ──────────────────────────────────────────────────
+# Environment
 .env
 .env.*
 !.env.example
-!.env.staging
-!.env.production
-!.env.development
+
+# Database
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+database/*.sqlite
+
+# Dependencies
+/vendor/
+/node_modules/
+
+# Uploads & Storage
+/public/assets/uploads/
+/public/uploads/
+/storage/
+/tmp/
+*.log
+storage/logs/*.log
+
+# IDE & OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Cache & Tests
+.phpunit.cache/
+coverage/
+coverage-html/
+
+# Exclude scripts
+check_users.php
+copy_project.php
+init_sqlite.php
+migrate.php
+reset_password.php
+public/test_*.php
+
+# Sensitive files
+note.txt
+notes.txt
+*.bak
+*.orig
+credentials.txt
+passwords.txt
