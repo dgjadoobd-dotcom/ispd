@@ -34,7 +34,7 @@ services:
       - DB_HOST=db
       - DB_DATABASE=radius_production
       - DB_USERNAME=radius_prod
-      - REDIS_HOST=redis
+      - REDIS_HOST=redis-master
       - SESSION_DRIVER=redis
       - CACHE_DRIVER=redis
       - QUEUE_CONNECTION=redis
@@ -46,8 +46,10 @@ services:
     networks:
       - radius-network-prod
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis-master:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
@@ -68,7 +70,7 @@ services:
       - DB_HOST=db
       - DB_DATABASE=radius_production
       - DB_USERNAME=radius_prod
-      - REDIS_HOST=redis
+      - REDIS_HOST=redis-master
       - SESSION_DRIVER=redis
       - CACHE_DRIVER=redis
       - QUEUE_CONNECTION=redis
@@ -80,8 +82,16 @@ services:
     networks:
       - radius-network-prod
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis-master:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   app3:
     build:
@@ -96,7 +106,7 @@ services:
       - DB_HOST=db
       - DB_DATABASE=radius_production
       - DB_USERNAME=radius_prod
-      - REDIS_HOST=redis
+      - REDIS_HOST=redis-master
       - SESSION_DRIVER=redis
       - CACHE_DRIVER=redis
       - QUEUE_CONNECTION=redis
@@ -108,8 +118,16 @@ services:
     networks:
       - radius-network-prod
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis-master:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Database (MySQL with replication)
   db:
@@ -125,8 +143,6 @@ services:
       - mysql-data-prod:/var/lib/mysql
       - ./docker/mysql/init-prod.sql:/docker-entrypoint-initdb.d/init.sql
       - ./docker/mysql/backup:/backup
-    ports:
-      - "3306:3306"
     networks:
       - radius-network-prod
     command: >

@@ -2,7 +2,7 @@
 # Multi-stage build for optimized production image
 
 # Stage 1: Build stage
-FROM php:8.1-cli-alpine AS builder
+FROM php:8.3-cli-alpine AS builder
 
 # Install system dependencies
 RUN apk add --no-cache \
@@ -65,7 +65,7 @@ RUN rm -rf \
     storage/framework/views/*
 
 # Stage 2: Production stage
-FROM php:8.1-fpm-alpine
+FROM php:8.3-fpm-alpine
 
 # Install production dependencies
 RUN apk add --no-cache \
@@ -73,6 +73,8 @@ RUN apk add --no-cache \
     libjpeg-turbo \
     freetype \
     libzip \
+    sqlite-libs \
+    sqlite-dev \
     nginx \
     supervisor \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -86,7 +88,8 @@ RUN apk add --no-cache \
     && docker-php-ext-install xml \
     && docker-php-ext-install intl \
     && docker-php-ext-install opcache \
-    && docker-php-ext-install sockets
+    && docker-php-ext-install sockets \
+    && docker-php-ext-install sqlite3
 
 # Install additional PHP extensions for production
 RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \

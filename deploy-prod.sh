@@ -8,6 +8,10 @@
 
 set -e
 
+# Source shared deploy helper library
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/scripts/deploy-helpers.sh"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -15,12 +19,24 @@ BLUE='\033[0;34m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-log()    { echo -e "${GREEN}[✓]${NC} $1"; }
-warn()   { echo -e "${YELLOW}[!]${NC} $1"; }
-error()  { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 header() { echo -e "\n${BLUE}══════════════════════════════════════${NC}"; echo -e "${BLUE}  $1${NC}"; echo -e "${BLUE}══════════════════════════════════════${NC}"; }
 
 header "Digital ISP ERP — PRODUCTION Deploy"
+
+# ── OS Detection ──────────────────────────────────────────────
+if [ -f /etc/os-release ]; then
+    OS_NAME=$(grep '^NAME=' /etc/os-release | cut -d= -f2- | tr -d '"')
+    OS_VERSION=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2- | tr -d '"')
+    deploy_log "Detected OS: ${OS_NAME} ${OS_VERSION}"
+else
+    deploy_log "WARNING: /etc/os-release not found — OS detection skipped"
+fi
+
+# ── Detect Docker Compose command ─────────────────────────────
+COMPOSE_CMD=$(detect_docker_compose)
+if [ -z "$COMPOSE_CMD" ]; then
+    deploy_log "WARNING: Neither 'docker compose' nor 'docker-compose' found — Docker steps will be skipped"
+fi
 
 # ── Safety confirmation ───────────────────────────────────────
 echo -e "${RED}${BOLD}"
@@ -31,30 +47,23 @@ echo "     2. Taken a database backup"
 echo "     3. Reviewed all changes"
 echo -e "${NC}"
 read -p "Type 'deploy-production' to confirm: " CONFIRM
-[ "$CONFIRM" != "deploy-production" ] && error "Deployment cancelled."
+[ "$CONFIRM" != "deploy-production" ] && { deploy_log "Deployment cancelled by operator."; exit 1; }
 
 # ── 1. Validate environment ───────────────────────────────────
-[ ! -f .env.production ] && error ".env.production not found. Create it from .env.example and configure production values."
+[ ! -f .env.production ] && { deploy_log "ERROR: .env.production not found. Create it from .env.example and configure production values."; exit 1; }
 
 cp .env.production .env
-log "Loaded .env.production"
+deploy_log "Loaded .env.production"
 
-# Validate all required production vars
-REQUIRED_VARS="APP_KEY APP_URL DB_HOST DB_DATABASE DB_USERNAME DB_PASSWORD JWT_SECRET SMS_API_KEY"
-for VAR in $REQUIRED_VARS; do
-    VAL=$(grep "^${VAR}=" .env | cut -d= -f2- | tr -d '"' | tr -d "'")
-    if [ -z "$VAL" ] || echo "$VAL" | grep -qi "REPLACE\|your_\|change_\|example\|placeholder"; then
-        error "$VAR is not set or still has a placeholder value in .env.production"
-    fi
-done
-log "All required environment variables validated"
+# Validate all required production vars using helper
+validate_env .env
+deploy_log "All required environment variables validated"
 
-# Ensure APP_DEBUG is off in production
-DEBUG=$(grep '^APP_DEBUG=' .env | cut -d= -f2 | tr -d '"' | tr -d "'")
-[ "$DEBUG" = "true" ] && error "APP_DEBUG must be false in production. Fix .env.production."
-log "APP_DEBUG=false confirmed"
+# ── 2. Check required packages ────────────────────────────────
+deploy_log "Checking required system packages..."
+check_required_packages
 
-# ── 2. Database backup ────────────────────────────────────────
+# ── 3. Database backup ────────────────────────────────────────
 header "Step 1/7: Database Backup"
 BACKUP_DIR="storage/backups"
 mkdir -p "$BACKUP_DIR"
@@ -66,7 +75,7 @@ if [ "$DB_CONN" = "sqlite" ]; then
     DB_PATH=$(grep '^DB_DATABASE=' .env | cut -d= -f2 | tr -d '"' | tr -d "'")
     if [ -f "$DB_PATH" ]; then
         cp "$DB_PATH" "${BACKUP_FILE%.sql}.sqlite"
-        log "SQLite backup saved: ${BACKUP_FILE%.sql}.sqlite"
+        deploy_log "SQLite backup saved: ${BACKUP_FILE%.sql}.sqlite"
     fi
 elif command -v mysqldump &>/dev/null; then
     DB_HOST=$(grep '^DB_HOST=' .env | cut -d= -f2 | tr -d '"' | tr -d "'")
@@ -75,103 +84,113 @@ elif command -v mysqldump &>/dev/null; then
     DB_NAME=$(grep '^DB_DATABASE=' .env | cut -d= -f2 | tr -d '"' | tr -d "'")
     mysqldump -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$BACKUP_FILE"
     gzip "$BACKUP_FILE"
-    log "MySQL backup saved: ${BACKUP_FILE}.gz"
+    deploy_log "MySQL backup saved: ${BACKUP_FILE}.gz"
 else
-    warn "mysqldump not found — skipping automatic backup. Ensure you have a manual backup."
+    deploy_log "WARNING: mysqldump not found — skipping automatic backup. Ensure you have a manual backup."
     read -p "Continue without backup? (yes/no): " SKIP_BACKUP
-    [ "$SKIP_BACKUP" != "yes" ] && error "Deployment cancelled — take a backup first."
+    [ "$SKIP_BACKUP" != "yes" ] && { deploy_log "Deployment cancelled — take a backup first."; exit 1; }
 fi
 
-# ── 3. Pull latest code ───────────────────────────────────────
+# ── 4. Pull latest code ───────────────────────────────────────
 header "Step 2/7: Code Update"
-log "Fetching latest code..."
+deploy_log "Fetching latest code..."
 git fetch origin
 git checkout main
 git pull origin main
 COMMIT=$(git rev-parse --short HEAD)
-log "Deployed commit: $COMMIT"
+deploy_log "Deployed commit: $COMMIT"
 
-# ── 4. Composer dependencies ─────────────────────────────────
+# ── 5. Composer dependencies ─────────────────────────────────
 header "Step 3/7: Dependencies"
-log "Installing PHP dependencies (production, no-dev)..."
+deploy_log "Checking PHP version..."
+check_php_version
+deploy_log "Installing PHP dependencies (production, no-dev)..."
 composer install --no-dev --optimize-autoloader --no-interaction --quiet
-log "Dependencies installed"
+deploy_log "Dependencies installed"
 
-# ── 5. Storage & permissions ──────────────────────────────────
+# ── 6. Storage & permissions ──────────────────────────────────
 header "Step 4/7: Permissions"
-mkdir -p storage/logs storage/cache storage/backups public/uploads/kyc public/uploads/photos
-chmod -R 775 storage public/uploads
-chown -R www-data:www-data storage public/uploads 2>/dev/null || true
-log "Storage directories and permissions set"
+ensure_www_data_user
+set_file_permissions production
+deploy_log "Storage directories and permissions set"
 
-# ── 6. Docker services ────────────────────────────────────────
+# ── 7. Cron jobs ──────────────────────────────────────────────
+deploy_log "Installing cron jobs..."
+install_cron_jobs
+
+# ── 8. Nginx symlink check ────────────────────────────────────
+if [ ! -e "/etc/nginx/sites-enabled/digital-isp" ]; then
+    deploy_log "WARNING: Nginx site 'digital-isp' is not present in /etc/nginx/sites-enabled/ — the site may not be served correctly. Run setup-ubuntu24.sh or symlink manually."
+fi
+
+# ── 9. Docker services ────────────────────────────────────────
 header "Step 5/7: Services"
 if [ -f docker-compose.prod.yml ]; then
-    log "Building production Docker images..."
-    docker-compose -f docker-compose.prod.yml build --no-cache
+    if [ -z "$COMPOSE_CMD" ]; then
+        deploy_log "ERROR: docker-compose.prod.yml found but no Docker Compose command available."
+        exit 1
+    fi
+    deploy_log "Building production Docker images..."
+    $COMPOSE_CMD -f docker-compose.prod.yml build --no-cache
 
-    log "Performing zero-downtime restart..."
+    deploy_log "Performing zero-downtime restart..."
     # Scale up new containers before stopping old ones
-    docker-compose -f docker-compose.prod.yml up -d --scale app=2 2>/dev/null || true
+    $COMPOSE_CMD -f docker-compose.prod.yml up -d --scale app=2 2>/dev/null || true
     sleep 10
-    docker-compose -f docker-compose.prod.yml up -d
-    log "Services restarted"
+    $COMPOSE_CMD -f docker-compose.prod.yml up -d
+    deploy_log "Services restarted"
 else
-    warn "docker-compose.prod.yml not found — restarting PHP-FPM manually..."
-    systemctl reload php8.3-fpm 2>/dev/null || \
-    systemctl reload php8.1-fpm 2>/dev/null || \
-    service php-fpm reload 2>/dev/null || \
-    warn "Could not reload PHP-FPM — restart it manually"
+    deploy_log "WARNING: docker-compose.prod.yml not found — restarting PHP-FPM manually..."
+    FPM_SERVICE=$(detect_php_fpm_service) && systemctl reload "$FPM_SERVICE" && deploy_log "Reloaded $FPM_SERVICE" || \
+        deploy_log "WARNING: Could not reload PHP-FPM — restart it manually"
 fi
 
-# ── 7. Database migrations ────────────────────────────────────
+# ── 10. Database migrations ────────────────────────────────────
 header "Step 6/7: Database Migrations"
 if [ "$DB_CONN" = "sqlite" ]; then
-    log "SQLite — schema auto-applied on first request"
+    deploy_log "SQLite — schema auto-applied on first request"
 elif command -v mysql &>/dev/null; then
-    DB_HOST=$(grep '^DB_HOST=' .env | cut -d= -f2 | tr -d '"' | tr -d "'")
-    DB_USER=$(grep '^DB_USERNAME=' .env | cut -d= -f2 | tr -d '"' | tr -d "'")
-    DB_PASS=$(grep '^DB_PASSWORD=' .env | cut -d= -f2 | tr -d '"' | tr -d "'")
-    DB_NAME=$(grep '^DB_DATABASE=' .env | cut -d= -f2 | tr -d '"' | tr -d "'")
-    for migration in database/migrations/*.sql; do
-        [ -f "$migration" ] || continue
-        MNAME=$(basename "$migration")
-        log "Applying migration: $MNAME"
-        mysql -h"$DB_HOST" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$migration" 2>/dev/null || \
-            warn "Migration $MNAME may have already been applied — skipping"
-    done
-    log "All migrations applied"
+    run_migrations .env
 else
-    warn "mysql client not found — run migrations manually"
+    deploy_log "WARNING: mysql client not found — run migrations manually"
 fi
 
-# ── 8. Health check ───────────────────────────────────────────
+# ── 11. Health check ───────────────────────────────────────────
 header "Step 7/7: Health Check"
 PROD_URL=$(grep '^APP_URL=' .env | cut -d= -f2 | tr -d '"' | tr -d "'")
 PROD_URL="${PROD_URL:-https://digitalisp.xyz}"
 
-log "Checking $PROD_URL/health ..."
+deploy_log "Checking $PROD_URL/health ..."
 sleep 8
 HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" "$PROD_URL/health" --max-time 15 2>/dev/null || echo "000")
 
 if [ "$HTTP_CODE" = "200" ]; then
-    log "Health check passed (HTTP 200) ✓"
+    deploy_log "Health check passed (HTTP 200) ✓"
 else
-    warn "Health check returned HTTP $HTTP_CODE — investigate immediately!"
+    deploy_log "WARNING: Health check returned HTTP $HTTP_CODE — investigate immediately!"
     echo ""
-    echo "  Check logs:"
+    echo "  Last 50 lines of storage/logs/app.log:"
+    echo "  ─────────────────────────────────────────"
+    if [ -f storage/logs/app.log ]; then
+        tail -50 storage/logs/app.log
+    else
+        echo "  (storage/logs/app.log not found)"
+    fi
+    echo ""
+    echo "  Check Docker logs:"
     if [ -f docker-compose.prod.yml ]; then
-        echo "    docker-compose -f docker-compose.prod.yml logs --tail=50 app"
+        echo "    $COMPOSE_CMD -f docker-compose.prod.yml logs --tail=50 app"
     else
         echo "    tail -50 storage/logs/app.log"
     fi
     echo ""
     read -p "Rollback to previous commit? (yes/no): " DO_ROLLBACK
     if [ "$DO_ROLLBACK" = "yes" ]; then
-        warn "Rolling back to previous commit..."
+        deploy_log "WARNING: Rolling back to previous commit..."
         git revert HEAD --no-edit
         git push origin main
-        error "Rolled back. Investigate the issue before re-deploying."
+        deploy_log "ERROR: Rolled back. Investigate the issue before re-deploying."
+        exit 1
     fi
 fi
 
@@ -184,6 +203,7 @@ echo "  Backup:  $BACKUP_DIR/"
 echo ""
 echo "  Monitor: tail -f storage/logs/app.log"
 if [ -f docker-compose.prod.yml ]; then
-    echo "  Logs:    docker-compose -f docker-compose.prod.yml logs -f app"
+    echo "  Logs:    $COMPOSE_CMD -f docker-compose.prod.yml logs -f app"
 fi
 echo ""
+deploy_log "Production deployment complete — commit: $COMMIT"
