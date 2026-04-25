@@ -10,9 +10,11 @@ Router::get('/', 'AuthController@showLogin');
 Router::get('/login', 'AuthController@showLogin');
 Router::post('/login', 'AuthController@login');
 Router::get('/logout', 'AuthController@logout');
+Router::get('/admin', 'AuthController@showLogin');
 
 // ── Dashboard ─────────────────────────────────────────────────────
 Router::get('/dashboard', 'DashboardController@index', ['AuthMiddleware']);
+Router::get('/dashbord', 'DashboardController@index', ['AuthMiddleware']);
 Router::get('/api/dashboard/live-stats', 'DashboardController@getLiveNetworkStats', ['AuthMiddleware']);
 
 // ── Customers ─────────────────────────────────────────────────────
@@ -554,5 +556,29 @@ Router::prefix('/ott', function() {
     Router::post('/process-renewals', 'OttController@processRenewals', ['AuthMiddleware']);
 });
 
+// ── Admin API (alternative route) ────────────────────────────────────
+Router::prefix('/admin/api', function() {
+    Router::get('/', 'DashboardController@index', ['AuthMiddleware']);
+    Router::get('/stats', 'DashboardController@getLiveNetworkStats', ['AuthMiddleware']);
+});
+
+// ── Admin Proxy ───────────────────────────────────────────────
+Router::prefix('/admin/proxy', function() {
+    Router::get('', 'DashboardController@index', ['AuthMiddleware']);
+    Router::get('/mikrotik', 'NetworkController@apiLiveSessions', ['AuthMiddleware']);
+    Router::get('/radius', 'NetworkController@radiusSessions', ['AuthMiddleware']);
+});
+
+// ── Piprapay Admin ────────────────────────────────────────
+Router::prefix('/admin/piprapay', function() {
+    Router::get('', 'PipraPayController@success', ['AuthMiddleware']);
+    Router::get('/dashboard', 'PipraPayController@success', ['AuthMiddleware']);
+    Router::post('/initiate/{invoice_id}', 'PipraPayController@initiate', ['AuthMiddleware']);
+    Router::post('/callback', 'PipraPayController@callback');
+});
+
 // Dispatch
+
+// ── Customer Portal (alternative route) ────────────────────────
+Router::get('/portal', 'PortalController@index');
 Router::dispatch($_SERVER['REQUEST_METHOD'], $path);
