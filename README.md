@@ -1,10 +1,11 @@
 <div align="center">
 
-<img src="https://img.shields.io/badge/PHP-8.1+-777BB4?style=for-the-badge&logo=php&logoColor=white" />
+<img src="https://img.shields.io/badge/PHP-8.1%20|%208.3-777BB4?style=for-the-badge&logo=php&logoColor=white" />
 <img src="https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql&logoColor=white" />
 <img src="https://img.shields.io/badge/SQLite-3-003B57?style=for-the-badge&logo=sqlite&logoColor=white" />
 <img src="https://img.shields.io/badge/MikroTik-RouterOS-FF6600?style=for-the-badge&logo=mikrotik&logoColor=white" />
 <img src="https://img.shields.io/badge/PHPUnit-10-6C3483?style=for-the-badge&logo=php&logoColor=white" />
+<img src="https://img.shields.io/badge/Ubuntu-24.04_LTS-E95420?style=for-the-badge&logo=ubuntu&logoColor=white" />
 <img src="https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge" />
 
 # 🌐 Digital ISP ERP
@@ -40,7 +41,8 @@ Manage customers, billing, GPON/fiber networks, MikroTik routers, RADIUS AAA, HR
 - 🌙 **Dark / Light Mode** — Full theme support across all pages
 - 📱 **Customer Portal** — Self-service: invoices, payments, usage, support tickets, AI chat
 - 🔌 **REST API** — Bearer token auth, full CRUD for all major resources
-- 🐳 **Docker Ready** — Full docker-compose stack with Nginx, PHP-FPM, MySQL, Redis
+- 🐳 **Docker Ready** — Full docker-compose stack with Nginx, PHP-FPM 8.3, MySQL, Redis; health checks on all services
+- 🚀 **Ubuntu 24.04 Ready** — One-command provisioning (`setup-ubuntu24.sh`), PHP 8.3 FPM socket, systemd agent service, logrotate, idempotent deploy scripts
 - 📥 **Excel Import** — 30-column client import with validation, duplicate detection, rules table, demo template download
 
 ---
@@ -113,11 +115,12 @@ Open **http://localhost:8000** and login with `admin` / `Admin@1234`
 
 | Requirement | Version |
 |-------------|---------|
-| PHP | 8.1+ |
+| PHP | 8.1+ (8.3 recommended for Ubuntu 24.04) |
 | MySQL | 8.0+ (production) |
 | SQLite | 3 (local/demo) |
-| PHP Extensions | `pdo`, `pdo_mysql`, `mbstring`, `curl`, `gd`, `zip`, `snmp` |
+| PHP Extensions | `pdo`, `pdo_mysql`, `mbstring`, `curl`, `gd`, `zip`, `sqlite3`, `redis` |
 | Web Server | Apache (mod_rewrite) or Nginx |
+| OS (production) | Ubuntu 24.04 LTS (Noble Numbat) recommended |
 
 ### Option A — XAMPP / Local (SQLite)
 
@@ -155,60 +158,85 @@ Open **http://localhost:8000** and login with `admin` / `Admin@1234`
    ```
 5. Set write permissions: `chmod 775 storage/ public/uploads/`
 
-### Option C — VPS / Ubuntu 24.04 + Nginx
+### Option C — VPS / Ubuntu 24.04 + Nginx (Recommended)
+
+#### Step 1 — Provision the server (run once)
 
 ```bash
-# Install dependencies
-sudo apt update && sudo apt install -y nginx mysql-server \
-  php8.3 php8.3-fpm php8.3-mysql php8.3-mbstring php8.3-curl \
-  php8.3-gd php8.3-snmp php8.3-xml php8.3-zip unzip curl
-
-# Create database
-sudo mysql -u root -p -e "
-  CREATE DATABASE digitalisp;
-  CREATE USER 'digitalisp'@'localhost' IDENTIFIED BY 'your_password';
-  GRANT ALL PRIVILEGES ON digitalisp.* TO 'digitalisp'@'localhost';
-  FLUSH PRIVILEGES;"
-
-# Clone and setup
+# Clone the repo first
 cd /var/www
-sudo git clone https://github.com/dgjadoobd-dotcom/ispd.git
-sudo chown -R www-data:www-data /var/www/ispd
-cd /var/www/ispd
-sudo cp .env.example .env && sudo nano .env
-sudo mysql -u digitalisp -p digitalisp < database/schema.sql
-sudo php setup.php
+sudo git clone https://github.com/dgjadoobd-dotcom/ispd.git digital-isp
+sudo chown -R www-data:www-data /var/www/digital-isp
+
+# Run the one-time provisioning script (installs PHP 8.3, Nginx, MySQL client,
+# Python venv, systemd service, logrotate, and Nginx site config)
+cd /var/www/digital-isp
+sudo bash setup-ubuntu24.sh
 ```
 
-Nginx config (`/etc/nginx/sites-available/ispd`):
-```nginx
-server {
-    listen 80;
-    server_name isp.yourdomain.com;
-    root /var/www/ispd/public;
-    index index.php;
+`setup-ubuntu24.sh` installs:
+- `php8.3-fpm` + all required extensions (`mysql`, `mbstring`, `curl`, `gd`, `zip`, `xml`, `redis`, `sqlite3`)
+- `nginx`, `mysql-client`, `git`, `curl`, `composer`
+- `python3`, `python3-venv` — creates `agent/venv` and installs `agent/requirements.txt`
+- systemd service `/etc/systemd/system/digital-isp-agent.service` (enabled, starts on boot)
+- logrotate config `/etc/logrotate.d/digital-isp` (daily, 30-day retention, USR1 reload)
+- Nginx site config symlinked to `/etc/nginx/sites-enabled/digital-isp`
 
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
-    }
+#### Step 2 — Configure environment
 
-    location ~ \.php$ {
-        include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php8.3-fpm.sock;
-    }
-
-    location ~ /\.(?!well-known).* { deny all; }
-}
+```bash
+sudo cp .env.example .env.production
+sudo nano .env.production   # fill in DB_*, APP_KEY, JWT_SECRET, APP_URL
 ```
+
+#### Step 3 — Deploy
+
+```bash
+sudo bash deploy-prod.sh
+```
+
+The deploy script automatically:
+- Validates all required env vars (fails fast with a full list of issues)
+- Checks PHP ≥ 8.1 and all required packages
+- Backs up the database before pulling new code
+- Runs `composer install --no-dev`
+- Sets correct file permissions (`www-data:www-data`, `.env` → `root:www-data 640`)
+- Applies SQL migrations idempotently via `_migrations` tracking table
+- Installs cron jobs for `www-data` (idempotent, no duplicates)
+- Reloads `php8.3-fpm` (falls back to 8.2 / 8.1 if needed)
+- Runs a health check and shows the last 50 log lines on failure
+
+#### Step 4 — Enable HTTPS (optional but recommended)
+
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.com
+# Then uncomment the HTTPS block in /etc/nginx/sites-available/digital-isp
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+#### Key differences from Ubuntu 22.04
+
+| Area | Ubuntu 22.04 | Ubuntu 24.04 |
+|------|-------------|-------------|
+| Default PHP | 8.1 | 8.3 |
+| PHP-FPM socket | `/run/php/php8.1-fpm.sock` | `/run/php/php8.3-fpm.sock` |
+| PHP-FPM service | `php8.1-fpm` | `php8.3-fpm` |
+| Docker Compose | `docker-compose` (v1) | `docker compose` (v2) |
+| Python | 3.10 | 3.12 |
 
 ### Option D — Docker
 
 ```bash
 cp .env.example .env
-docker-compose up -d
+# Edit .env with your credentials
+docker compose up -d        # Docker Compose v2 (Ubuntu 24.04)
+# or: docker-compose up -d  # Docker Compose v1 (older systems)
 ```
 
-Services: `nginx:80`, `php-fpm:9000`, `mysql:3306`, `redis:6379`, `phpmyadmin:8081`
+Services: `nginx:80`, `php-fpm:9000`, `mysql:3306` (internal only), `redis:6379`, `phpmyadmin:8081`
+
+The production stack (`docker-compose.prod.yml`) uses `php:8.3-fpm`, health checks on all services, and `depends_on: condition: service_healthy` so migrations only run after the database is ready.
 
 ---
 
@@ -252,7 +280,14 @@ ispd/
 │   ├── sqlite_schema.sql             # SQLite schema (auto-applied)
 │   ├── radius_schema.sql             # FreeRADIUS tables
 │   └── migrations/                   # Incremental migration files
-├── docker/                           # Nginx, PHP, MySQL, monitoring configs
+├── docker/
+│   ├── nginx/
+│   │   ├── nginx-ubuntu24.conf       # Bare-metal Ubuntu 24.04 site config
+│   │   └── nginx-prod.conf           # Docker production config
+│   ├── php/
+│   │   ├── php.ini                   # Production settings (display_errors Off)
+│   │   └── php-dev.ini               # Development override (display_errors On)
+│   └── ...                           # MySQL, monitoring configs
 ├── public/
 │   ├── index.php                     # Front controller
 │   └── assets/                       # CSS, JS, images, uploads
@@ -277,12 +312,20 @@ ispd/
 │   ├── finance/                      # Cashbook, expenses
 │   ├── portal/                       # Customer self-service portal
 │   └── settings/                     # Users, branches, SMS, packages
+├── scripts/
+│   └── deploy-helpers.sh             # Shared shell functions for all deploy scripts
 ├── tests/
 │   ├── Unit/
+│   │   ├── AppConfigTest.php         # Timezone + debug mode config tests
+│   │   ├── DatabaseMigrationTest.php # _migrations table idempotency test
 │   │   ├── HrServiceTest.php         # 17 tests: salary, attendance, leave
 │   │   └── ...
 │   └── Integration/
 ├── agent/                            # Python WhatsApp bot + daily agent
+├── setup-ubuntu24.sh                 # One-time Ubuntu 24.04 server provisioner
+├── deploy-prod.sh                    # Production deploy script
+├── deploy-staging.sh                 # Staging deploy script
+├── deploy-dev.sh                     # Development deploy script
 ├── .env.example
 └── docker-compose.yml
 ```
@@ -443,16 +486,17 @@ Download the demo template from the Import modal. Rejected rows are shown with r
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `APP_ENV` | `local` / `production` | `local` |
-| `APP_URL` | Base URL | `http://localhost:8000` |
-| `APP_DEBUG` | Show errors | `true` |
+| `APP_ENV` | `local` / `staging` / `production` | `local` |
+| `APP_URL` | Base URL (no trailing slash) | `http://localhost:8000` |
+| `APP_DEBUG` | Show errors — **must be `false` in production** | `true` |
+| `APP_TIMEZONE` | PHP timezone, applied via `date_default_timezone_set()` | `Asia/Dhaka` |
 | `DB_CONNECTION` | `mysql` or `sqlite` | `sqlite` |
 | `DB_HOST` | Database host | `127.0.0.1` |
-| `DB_DATABASE` | Database name / path | `database/digital_isp.sqlite` |
+| `DB_DATABASE` | Database name / SQLite path | `database/digital_isp.sqlite` |
 | `RADIUS_HOST` | FreeRADIUS host | `127.0.0.1` |
 | `SMS_GATEWAY` | SMS provider | `sslwireless` |
 | `SMS_API_KEY` | SMS gateway API key | — |
-| `JWT_SECRET` | API token secret | *(set this!)* |
+| `JWT_SECRET` | API token secret — **min 32 chars** | *(set this!)* |
 | `AI_ENABLED` | Enable AI features | `true` |
 | `AI_BASE_URL` | LM Studio / OpenAI-compatible API | `http://localhost:1234/v1` |
 
@@ -462,16 +506,25 @@ See `.env.example` for the full list.
 
 ## 🚀 Cron Jobs
 
-```cron
-# Daily billing automation (midnight)
-0 0 * * * php /var/www/ispd/cron_automation.php
+Cron jobs are installed automatically by `deploy-prod.sh` under the `www-data` user. To install manually:
 
-# RADIUS usage rollup (every hour)
-0 * * * * php /var/www/ispd/cron_radius_rollup.php
-
-# Self-hosted payment sync (every 5 minutes)
-*/5 * * * * php /var/www/ispd/cron_selfhosted_piprapay.php
+```bash
+sudo bash -c 'source scripts/deploy-helpers.sh && install_cron_jobs /var/www/digital-isp'
 ```
+
+Installed schedule:
+
+```cron
+# digital-isp-cron
+0 0    * * * /usr/bin/php8.3 /var/www/digital-isp/cron_automation.php >> .../automation_cron.log 2>&1
+0 8    * * * /usr/bin/php8.3 /var/www/digital-isp/cron_automation.php due-reminders >> ...
+0 */6  * * * /usr/bin/php8.3 /var/www/digital-isp/cron_automation.php suspend >> ...
+5 0    * * * /usr/bin/php8.3 /var/www/digital-isp/cron_radius_rollup.php >> ...
+10 0   * * * /usr/bin/php8.3 /var/www/digital-isp/cron_selfhosted_piprapay.php >> ...
+# end-digital-isp-cron
+```
+
+The PHP binary path is detected automatically (`/usr/bin/php8.3` → `8.2` → `8.1` fallback). Running the deploy script again replaces the block without creating duplicates.
 
 ---
 
@@ -493,6 +546,8 @@ composer install
 ```
 
 Current test coverage includes:
+- **App config**: timezone application from env, debug mode off in production
+- **Database migrations**: `_migrations` tracking table idempotency (SQLite in-memory)
 - HR module: salary calculation, attendance validation, leave balance, employee-user relationship (17 tests)
 - RADIUS: bulk operations, session management, analytics
 - Security: IP access control, rate limiting, MFA
