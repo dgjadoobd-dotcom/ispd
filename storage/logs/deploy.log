@@ -1,0 +1,9 @@
+[2026-04-25 08:01:41] ERROR: Environment validation failed for: /tmp/tmp.XTJsmg7NB2
+[2026-04-25 08:01:41]        The following variables are invalid or missing:
+[2026-04-25 08:01:41]   - APP_KEY: contains placeholder value ('REPLACE_ME')
+[2026-04-25 08:01:41]   - APP_URL: missing or empty
+[2026-04-25 08:01:42]   - DB_HOST: contains placeholder value ('your_host')
+[2026-04-25 08:01:42]   - DB_USERNAME: contains placeholder value ('your_user')
+[2026-04-25 08:01:42]   - DB_PASSWORD: contains placeholder value ('change_me_please')
+[2026-04-25 08:01:42]   - JWT_SECRET: contains placeholder value ('example_secret')
+[2026-04-25 08:01:42]   - APP_DEBUG: must be 'false' in production (currently 'true')
