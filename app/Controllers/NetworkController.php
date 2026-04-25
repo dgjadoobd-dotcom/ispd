@@ -481,7 +481,7 @@ class NetworkController {
 
     public function radius(): void {
         $pageTitle = 'RADIUS AAA';
-        $currentPage = 'network';
+        $currentPage = 'radius';
         $currentSubPage = 'radius';
 
         $users = $this->db->fetchAll(
@@ -916,7 +916,7 @@ class NetworkController {
 
     public function radiusProfiles(): void {
         $pageTitle = 'RADIUS Profiles';
-        $currentPage = 'network';
+        $currentPage = 'radius';
         $currentSubPage = 'radius_profiles';
         
         // Local RADIUS profiles from database
@@ -1159,15 +1159,24 @@ class NetworkController {
         $currentSubPage = 'mac-bindings';
         
         $bindings = $this->db->fetchAll(
-            "SELECT mb.*, n.name as nas_name, c.full_name as customer_name, c.customer_code
+            "SELECT mb.*, n.name as nas_name, c.full_name as customer_name, c.customer_code,
+                    o.serial_number as onu_serial_linked, o.model as onu_model
              FROM mac_bindings mb
              LEFT JOIN nas_devices n ON n.id = mb.nas_id
              LEFT JOIN customers c ON c.id = mb.customer_id
+             LEFT JOIN onus o ON o.customer_id = mb.customer_id
              ORDER BY mb.created_at DESC"
         );
         
         $nasDevices = $this->db->fetchAll("SELECT id, name, ip_address FROM nas_devices WHERE is_active = 1");
-        $customers = $this->db->fetchAll("SELECT id, customer_code, full_name, phone FROM customers WHERE status = 'active' ORDER BY full_name");
+        $customers  = $this->db->fetchAll(
+            "SELECT c.id, c.customer_code, c.full_name, c.phone, c.pppoe_username,
+                    o.serial_number as onu_serial, o.mac_address as onu_mac, o.model as onu_model
+             FROM customers c
+             LEFT JOIN onus o ON o.customer_id = c.id
+             WHERE c.status = 'active'
+             ORDER BY c.full_name"
+        );
         
         $viewFile = BASE_PATH . '/views/network/mac-bindings.php';
         require_once BASE_PATH . '/views/layouts/main.php';
@@ -1175,20 +1184,26 @@ class NetworkController {
 
     public function storeMacBinding(): void {
         $mac = strtoupper(sanitize($_POST['mac_address'] ?? ''));
-        if (!preg_match('/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/', $mac)) {
-            $_SESSION['error'] = "Invalid MAC address format";
+        if (!preg_match('/^([0-9A-F]{2}[:\-]){5}[0-9A-F]{2}$/', $mac)) {
+            $_SESSION['error'] = "Invalid MAC address format (e.g. AA:BB:CC:DD:EE:FF)";
             redirect(base_url('network/mac-bindings'));
         }
         
         $data = [
-            'username'    => sanitize($_POST['username'] ?? ''),
-            'mac_address' => $mac,
-            'caller_id'   => sanitize($_POST['caller_id'] ?? ''),
-            'nas_id'      => !empty($_POST['nas_id']) ? (int)$_POST['nas_id'] : null,
-            'customer_id' => !empty($_POST['customer_id']) ? (int)$_POST['customer_id'] : null,
-            'is_active'   => 1,
-            'is_allowed'  => isset($_POST['is_allowed']) ? 1 : 0,
-            'description' => sanitize($_POST['description'] ?? ''),
+            'username'     => sanitize($_POST['username'] ?? ''),
+            'device_type'  => in_array($_POST['device_type'] ?? '', ['onu','router','other']) ? $_POST['device_type'] : 'router',
+            'binding_type' => in_array($_POST['binding_type'] ?? '', ['pppoe_callerid','mac_auth','static_ip']) ? $_POST['binding_type'] : 'pppoe_callerid',
+            'mac_address'  => $mac,
+            'caller_id'    => sanitize($_POST['caller_id'] ?? ''),
+            'onu_serial'   => sanitize($_POST['onu_serial'] ?? ''),
+            'router_brand' => sanitize($_POST['router_brand'] ?? ''),
+            'router_model' => sanitize($_POST['router_model'] ?? ''),
+            'ip_address'   => sanitize($_POST['ip_address'] ?? ''),
+            'nas_id'       => !empty($_POST['nas_id']) ? (int)$_POST['nas_id'] : null,
+            'customer_id'  => !empty($_POST['customer_id']) ? (int)$_POST['customer_id'] : null,
+            'is_active'    => 1,
+            'is_allowed'   => isset($_POST['is_allowed']) ? 1 : 0,
+            'description'  => sanitize($_POST['description'] ?? ''),
         ];
         
         $this->db->insert('mac_bindings', $data);
@@ -1198,19 +1213,25 @@ class NetworkController {
 
     public function updateMacBinding(string $id): void {
         $mac = strtoupper(sanitize($_POST['mac_address'] ?? ''));
-        if (!empty($mac) && !preg_match('/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/', $mac)) {
+        if (!empty($mac) && !preg_match('/^([0-9A-F]{2}[:\-]){5}[0-9A-F]{2}$/', $mac)) {
             $_SESSION['error'] = "Invalid MAC address format";
             redirect(base_url('network/mac-bindings'));
         }
         
         $data = [
-            'username'    => sanitize($_POST['username'] ?? ''),
-            'caller_id'   => sanitize($_POST['caller_id'] ?? ''),
-            'nas_id'      => !empty($_POST['nas_id']) ? (int)$_POST['nas_id'] : null,
-            'customer_id' => !empty($_POST['customer_id']) ? (int)$_POST['customer_id'] : null,
-            'is_allowed'  => isset($_POST['is_allowed']) ? 1 : 0,
-            'description' => sanitize($_POST['description'] ?? ''),
-            'updated_at' => date('Y-m-d H:i:s'),
+            'username'     => sanitize($_POST['username'] ?? ''),
+            'device_type'  => in_array($_POST['device_type'] ?? '', ['onu','router','other']) ? $_POST['device_type'] : 'router',
+            'binding_type' => in_array($_POST['binding_type'] ?? '', ['pppoe_callerid','mac_auth','static_ip']) ? $_POST['binding_type'] : 'pppoe_callerid',
+            'caller_id'    => sanitize($_POST['caller_id'] ?? ''),
+            'onu_serial'   => sanitize($_POST['onu_serial'] ?? ''),
+            'router_brand' => sanitize($_POST['router_brand'] ?? ''),
+            'router_model' => sanitize($_POST['router_model'] ?? ''),
+            'ip_address'   => sanitize($_POST['ip_address'] ?? ''),
+            'nas_id'       => !empty($_POST['nas_id']) ? (int)$_POST['nas_id'] : null,
+            'customer_id'  => !empty($_POST['customer_id']) ? (int)$_POST['customer_id'] : null,
+            'is_allowed'   => isset($_POST['is_allowed']) ? 1 : 0,
+            'description'  => sanitize($_POST['description'] ?? ''),
+            'updated_at'   => date('Y-m-d H:i:s'),
         ];
         
         if (!empty($mac)) {
@@ -1345,7 +1366,7 @@ class NetworkController {
 
     public function radiusDashboard(): void {
         $pageTitle      = 'RADIUS Dashboard';
-        $currentPage    = 'network';
+        $currentPage    = 'radius';
         $currentSubPage = 'radius_dashboard';
 
         $stats = ['total_active' => 0, 'total_bytes_in' => 0, 'total_bytes_out' => 0, 'unique_nas_count' => 0];
@@ -1425,7 +1446,7 @@ class NetworkController {
 
     public function radiusSessions(): void {
         $pageTitle      = 'RADIUS Sessions';
-        $currentPage    = 'network';
+        $currentPage    = 'radius';
         $currentSubPage = 'radius_sessions';
 
         $activeSessions = [];
@@ -1490,7 +1511,7 @@ class NetworkController {
 
     public function radiusAnalytics(): void {
         $pageTitle      = 'RADIUS Analytics';
-        $currentPage    = 'network';
+        $currentPage    = 'radius';
         $currentSubPage = 'radius_analytics';
 
         $period       = in_array($_GET['period'] ?? '', ['today','week','month']) ? $_GET['period'] : 'today';
@@ -1570,7 +1591,7 @@ class NetworkController {
 
     public function radiusAudit(): void {
         $pageTitle      = 'RADIUS Audit Log';
-        $currentPage    = 'network';
+        $currentPage    = 'radius';
         $currentSubPage = 'radius_audit';
 
         require_once BASE_PATH . '/app/Services/RadiusAuditService.php';

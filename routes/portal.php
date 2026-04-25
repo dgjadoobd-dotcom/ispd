@@ -64,6 +64,10 @@ Router::prefix('/portal', function() {
         Router::get('/api/categories', 'PortalSupportController@getCategories');
     });
 
+    // ── Package Change Requests ───────────────────────────────────
+    Router::get('/package-change', 'PortalSupportController@packageChangeForm');
+    Router::post('/package-change', 'PortalSupportController@packageChangeStore');
+
     // ── Profile ───────────────────────────────────────────────────
     Router::prefix('/profile', function() {
         Router::get('', 'PortalProfileController@index');

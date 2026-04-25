@@ -28,6 +28,12 @@ $services = [
     'LoggingService',
     'BaseService',
     'HrService',
+    // Branch module
+    'BranchService',
+    // BTRC Report module
+    'BtrcReportService',
+    // Role module
+    'RoleService',
 ];
 
 foreach ($services as $class) {
@@ -63,8 +69,32 @@ if (file_exists($dbConfig) && !class_exists('Database')) {
 // Load HR test doubles
 $testDoubles = [
     __DIR__ . '/Unit/TestableHrService.php',
+    __DIR__ . '/Unit/TestableBranchService.php',
+    __DIR__ . '/Unit/TestableBtrcReportService.php',
+    __DIR__ . '/Unit/TestableRoleService.php',
 ];
 foreach ($testDoubles as $file) {
+    if (file_exists($file)) {
+        require_once $file;
+    }
+}
+
+// Load CrossModuleDataFlowService and its integration test double
+$crossModuleFiles = [
+    __DIR__ . '/../app/Services/CrossModuleDataFlowService.php',
+    __DIR__ . '/Integration/TestableCrossModuleDataFlowService.php',
+];
+foreach ($crossModuleFiles as $file) {
+    if (file_exists($file)) {
+        require_once $file;
+    }
+}
+
+// Load Middleware classes needed by integration tests
+$middlewareFiles = [
+    __DIR__ . '/../app/Middleware/PortalSessionMiddleware.php',
+];
+foreach ($middlewareFiles as $file) {
     if (file_exists($file)) {
         require_once $file;
     }

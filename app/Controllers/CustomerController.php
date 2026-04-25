@@ -836,6 +836,171 @@ class CustomerController {
         exit;
     }
 
+    // ── New Requests (pending customers + package change tickets) ─────
+
+    public function requests(): void {
+        $pageTitle      = 'New Requests';
+        $currentPage    = 'clients';
+        $currentSubPage = 'client-requests';
+
+        // Pending new connection customers
+        $pendingCustomers = $this->db->fetchAll(
+            "SELECT c.*, b.name as branch_name, z.name as zone_name, p.name as package_name
+             FROM customers c
+             LEFT JOIN branches b ON b.id=c.branch_id
+             LEFT JOIN zones z ON z.id=c.zone_id
+             LEFT JOIN packages p ON p.id=c.package_id
+             WHERE c.status='pending'
+             ORDER BY c.created_at DESC"
+        );
+
+        // Package change requests (support tickets with category=package_change)
+        $pkgRequests = $this->db->fetchAll(
+            "SELECT t.*, c.full_name as customer_name, c.customer_code, c.phone,
+                    p.name as current_package
+             FROM support_tickets t
+             JOIN customers c ON c.id=t.customer_id
+             LEFT JOIN packages p ON p.id=c.package_id
+             WHERE t.category='package_change' AND t.status NOT IN ('resolved','closed')
+             ORDER BY t.created_at DESC"
+        );
+
+        // Online signup requests (support tickets with category=new_connection from portal)
+        $onlineSignups = $this->db->fetchAll(
+            "SELECT t.*, c.full_name as customer_name, c.customer_code, c.phone
+             FROM support_tickets t
+             JOIN customers c ON c.id=t.customer_id
+             WHERE t.category='new_connection' AND t.status NOT IN ('resolved','closed')
+             ORDER BY t.created_at DESC"
+        );
+
+        $viewFile = BASE_PATH . '/views/customers/requests.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
+    }
+
+    public function approveRequest(string $id): void {
+        $customer = $this->db->fetchOne("SELECT * FROM customers WHERE id=? AND status='pending'", [$id]);
+        if (!$customer) {
+            $_SESSION['error'] = 'Pending customer not found.';
+            redirect(base_url('customers/requests'));
+            return;
+        }
+        $this->db->update('customers', ['status' => 'active'], 'id=?', [$id]);
+        $_SESSION['success'] = "Customer '{$customer['full_name']}' approved and activated.";
+        redirect(base_url('customers/requests'));
+    }
+
+    public function rejectRequest(string $id): void {
+        $customer = $this->db->fetchOne("SELECT * FROM customers WHERE id=? AND status='pending'", [$id]);
+        if (!$customer) {
+            $_SESSION['error'] = 'Pending customer not found.';
+            redirect(base_url('customers/requests'));
+            return;
+        }
+        $reason = sanitize($_POST['reason'] ?? 'Request rejected by admin.');
+        $this->db->update('customers', ['status' => 'cancelled', 'notes' => $reason], 'id=?', [$id]);
+        $_SESSION['success'] = "Request for '{$customer['full_name']}' rejected.";
+        redirect(base_url('customers/requests'));
+    }
+
+    public function approvePackageChange(string $id): void {
+        // $id = support ticket id
+        $ticket = $this->db->fetchOne("SELECT * FROM support_tickets WHERE id=? AND category='package_change'", [$id]);
+        if (!$ticket) {
+            $_SESSION['error'] = 'Package change request not found.';
+            redirect(base_url('customers/requests'));
+            return;
+        }
+        $newPackageId = (int)($_POST['package_id'] ?? 0);
+        if ($newPackageId) {
+            $this->db->update('customers', ['package_id' => $newPackageId], 'id=?', [$ticket['customer_id']]);
+        }
+        $this->db->update('support_tickets', ['status' => 'resolved', 'resolved_at' => date('Y-m-d H:i:s')], 'id=?', [$id]);
+        $_SESSION['success'] = 'Package change approved and applied.';
+        redirect(base_url('customers/requests'));
+    }
+
+    // ── Online Signup (public — no auth) ──────────────────────────
+
+    public function signupForm(): void {
+        // Don't show if already logged in as admin
+        $packages = $this->db->fetchAll("SELECT id, name, speed_download, speed_upload, price FROM packages WHERE is_active=1 ORDER BY price ASC");
+        $zones    = $this->db->fetchAll("SELECT id, name FROM zones WHERE is_active=1 ORDER BY name ASC");
+        $viewFile = BASE_PATH . '/views/customers/signup.php';
+        // Use a minimal layout (no sidebar)
+        require_once BASE_PATH . '/views/layouts/public.php';
+    }
+
+    public function signupStore(): void {
+        $fullName = sanitize($_POST['full_name'] ?? '');
+        $phone    = sanitize($_POST['phone'] ?? '');
+        $address  = sanitize($_POST['address'] ?? '');
+        $email    = sanitize($_POST['email'] ?? '');
+        $pkgId    = (int)($_POST['package_id'] ?? 0) ?: null;
+        $zoneId   = (int)($_POST['zone_id'] ?? 0) ?: null;
+        $notes    = sanitize($_POST['notes'] ?? '');
+
+        $errors = [];
+        if (empty($fullName)) $errors[] = 'Full name is required.';
+        if (empty($phone))    $errors[] = 'Phone number is required.';
+        if (empty($address))  $errors[] = 'Address is required.';
+
+        if ($errors) {
+            $_SESSION['signup_error'] = implode(' ', $errors);
+            redirect(base_url('signup'));
+            return;
+        }
+
+        // Check duplicate phone
+        $dup = $this->db->fetchOne("SELECT id FROM customers WHERE phone=?", [$phone]);
+        if ($dup) {
+            $_SESSION['signup_error'] = 'A customer with this phone number already exists. Please contact support.';
+            redirect(base_url('signup'));
+            return;
+        }
+
+        // Get default branch
+        $branch = $this->db->fetchOne("SELECT id FROM branches WHERE is_active=1 LIMIT 1");
+        $branchId = $branch['id'] ?? 1;
+
+        try {
+            $customerId = $this->db->insert('customers', [
+                'customer_code'   => $this->generateCustomerCode(),
+                'branch_id'       => $branchId,
+                'zone_id'         => $zoneId,
+                'package_id'      => $pkgId,
+                'full_name'       => $fullName,
+                'phone'           => $phone,
+                'email'           => $email,
+                'address'         => $address,
+                'status'          => 'pending',
+                'connection_date' => date('Y-m-d'),
+                'notes'           => $notes ?: 'Online signup request',
+                'created_by'      => null,
+            ]);
+
+            // Create a support ticket so admin sees it in New Requests
+            $ticketNum = 'TKT-' . date('Ymd') . '-' . str_pad(rand(1,9999), 4, '0', STR_PAD_LEFT);
+            $this->db->insert('support_tickets', [
+                'ticket_number' => $ticketNum,
+                'customer_id'   => $customerId,
+                'branch_id'     => $branchId,
+                'category'      => 'new_connection',
+                'priority'      => 'normal',
+                'subject'       => "New Connection Request — {$fullName}",
+                'description'   => "Online signup request.\nName: {$fullName}\nPhone: {$phone}\nAddress: {$address}\nNotes: {$notes}",
+                'status'        => 'open',
+            ]);
+
+            $_SESSION['signup_success'] = true;
+            $_SESSION['signup_name']    = $fullName;
+            redirect(base_url('signup?success=1'));
+        } catch (\Exception $e) {
+            $_SESSION['signup_error'] = 'Submission failed. Please try again or call us directly.';
+            redirect(base_url('signup'));
+        }
+    }
+
     public function apiSearch(): void {
         header('Content-Type: application/json');
         if (!isset($_SESSION['user_id'])) {

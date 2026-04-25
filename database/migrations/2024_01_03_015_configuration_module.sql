@@ -1,0 +1,6 @@
+-- ============================================================
+-- Migration: 2024_01_03_015_configuration_module
+-- Description: Business Configuration module
+-- Requirements: 17.1-17.10
+-- ============================================================
+-- Tables (configuration_settings, billing_rules, invoice_templates) exist in earlier migrations

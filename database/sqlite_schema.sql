@@ -395,8 +395,14 @@ CREATE TABLE IF NOT EXISTS radius_users (
 CREATE TABLE IF NOT EXISTS mac_bindings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username VARCHAR(100) NOT NULL,
+    device_type TEXT DEFAULT 'router',          -- 'onu' | 'router' | 'other'
+    binding_type TEXT DEFAULT 'pppoe_callerid', -- 'pppoe_callerid' | 'mac_auth' | 'static_ip'
     mac_address VARCHAR(20) NOT NULL,
     caller_id VARCHAR(50),
+    onu_serial VARCHAR(100),
+    router_brand VARCHAR(80),
+    router_model VARCHAR(80),
+    ip_address VARCHAR(45),
     nas_id INTEGER,
     customer_id INTEGER,
     is_active INTEGER DEFAULT 1,

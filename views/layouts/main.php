@@ -550,11 +550,23 @@
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $clientsOpen?'open':'' ?>" id="clientsMenu">
-            <a href="<?= base_url('customers') ?>" class="sub-item <?= $csp==='client-list'?'active':'' ?>">
-                <i class="fa-solid fa-list"></i> All Customers
+            <a href="<?= base_url('customers') ?>" class="sub-item <?= ($csp==='client-list'&&empty($_GET['status']))?'active':'' ?>">
+                <i class="fa-solid fa-list"></i> All Clients
+            </a>
+            <a href="<?= base_url('customers?status=active') ?>" class="sub-item <?= ($csp==='client-list'&&($_GET['status']??'')==='active')?'active':'' ?>">
+                <i class="fa-solid fa-circle-check" style="color:var(--green)"></i> Active
+            </a>
+            <a href="<?= base_url('customers?status=pending') ?>" class="sub-item <?= ($csp==='client-list'&&($_GET['status']??'')==='pending')?'active':'' ?>">
+                <i class="fa-solid fa-clock" style="color:var(--yellow)"></i> Pending
+            </a>
+            <a href="<?= base_url('customers?status=suspended') ?>" class="sub-item <?= ($csp==='client-list'&&($_GET['status']??'')==='suspended')?'active':'' ?>">
+                <i class="fa-solid fa-ban" style="color:var(--red)"></i> Suspended
+            </a>
+            <a href="<?= base_url('customers/requests') ?>" class="sub-item <?= $csp==='client-requests'?'active':'' ?>">
+                <i class="fa-solid fa-inbox" style="color:var(--purple)"></i> New Requests
             </a>
             <a href="<?= base_url('customers/create') ?>" class="sub-item <?= $csp==='client-create'?'active':'' ?>">
-                <i class="fa-solid fa-user-plus"></i> New Customer
+                <i class="fa-solid fa-user-plus"></i> New Client
             </a>
         </div>
 
@@ -565,6 +577,9 @@
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $billingOpen?'open':'' ?>" id="billingMenu">
+            <a href="<?= base_url('billing') ?>" class="sub-item <?= ($cp==='billing'&&$csp==='')?'active':'' ?>">
+                <i class="fa-solid fa-gauge-high"></i> Overview
+            </a>
             <a href="<?= base_url('billing/invoices') ?>" class="sub-item <?= $csp==='invoices'?'active':'' ?>">
                 <i class="fa-solid fa-file-invoice"></i> Invoices
             </a>
@@ -592,6 +607,11 @@
             <a href="<?= base_url('reports/customers') ?>" class="sub-item <?= $csp==='customers-report'?'active':'' ?>">
                 <i class="fa-solid fa-chart-area"></i> Customer Growth
             </a>
+            <?php if (PermissionHelper::hasPermission('btrc_reports.view')): ?>
+            <a href="<?= base_url('reports/btrc') ?>" class="sub-item <?= $csp==='btrc-report'?'active':'' ?>">
+                <i class="fa-solid fa-file-shield"></i> BTRC Report
+            </a>
+            <?php endif; ?>
         </div>
 
         <!-- Finance -->
@@ -610,7 +630,7 @@
         </div>
 
         <!-- Network -->
-        <?php $netOpen = $cp === 'network' || $cp === 'monitoring'; ?>
+        <?php $netOpen = in_array($cp, ['network', 'monitoring']); ?>
         <div class="nav-item <?= $netOpen?'open':'' ?>" onclick="toggleNav('netMenu',this)" data-label="Network">
             <div class="left-part"><span class="icon"><i class="fa-solid fa-server"></i></span><span class="nav-label">Network</span></div>
             <i class="fa-solid fa-chevron-right chevron"></i>
@@ -631,24 +651,6 @@
             <a href="<?= base_url('network/pppoe-active') ?>" class="sub-item <?= $csp==='pppoe-active'?'active':'' ?>">
                 <i class="fa-solid fa-circle-play"></i> Active Sessions
             </a>
-            <a href="<?= base_url('network/radius') ?>" class="sub-item <?= $csp==='radius'?'active':'' ?>">
-                <i class="fa-solid fa-satellite-dish"></i> RADIUS Users
-            </a>
-            <a href="<?= base_url('network/radius/profiles') ?>" class="sub-item <?= $csp==='radius_profiles'?'active':'' ?>">
-                <i class="fa-solid fa-folder-tree"></i> RADIUS Profiles
-            </a>
-            <a href="<?= base_url('network/radius/dashboard') ?>" class="sub-item <?= $csp==='radius_dashboard'?'active':'' ?>">
-                <i class="fa-solid fa-gauge"></i> RADIUS Dashboard
-            </a>
-            <a href="<?= base_url('network/radius/sessions') ?>" class="sub-item <?= $csp==='radius_sessions'?'active':'' ?>">
-                <i class="fa-solid fa-plug-circle-check"></i> RADIUS Sessions
-            </a>
-            <a href="<?= base_url('network/radius/analytics') ?>" class="sub-item <?= $csp==='radius_analytics'?'active':'' ?>">
-                <i class="fa-solid fa-chart-column"></i> RADIUS Analytics
-            </a>
-            <a href="<?= base_url('network/radius/audit') ?>" class="sub-item <?= $csp==='radius_audit'?'active':'' ?>">
-                <i class="fa-solid fa-shield-halved"></i> RADIUS Audit Log
-            </a>
             <a href="<?= base_url('network/mac-bindings') ?>" class="sub-item <?= $csp==='mac-bindings'?'active':'' ?>">
                 <i class="fa-solid fa-link"></i> MAC Bindings
             </a>
@@ -657,6 +659,38 @@
             </a>
             <a href="<?= base_url('network/online-clients') ?>" class="sub-item <?= $csp==='online-clients'?'active':'' ?>">
                 <i class="fa-solid fa-desktop"></i> Online Clients
+            </a>
+            <?php if (PermissionHelper::hasPermission('network.view')): ?>
+            <a href="<?= base_url('network/diagram') ?>" class="sub-item <?= $csp==='network-diagram'?'active':'' ?>">
+                <i class="fa-solid fa-diagram-project"></i> Network Map
+            </a>
+            <?php endif; ?>
+        </div>
+
+        <!-- RADIUS AAA -->
+        <?php $radiusOpen = $cp === 'radius'; ?>
+        <div class="nav-item <?= $radiusOpen?'open':'' ?>" onclick="toggleNav('radiusMenu',this)" data-label="RADIUS AAA">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-satellite-dish"></i></span><span class="nav-label">RADIUS AAA</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $radiusOpen?'open':'' ?>" id="radiusMenu">
+            <a href="<?= base_url('network/radius/dashboard') ?>" class="sub-item <?= $csp==='radius_dashboard'?'active':'' ?>">
+                <i class="fa-solid fa-gauge"></i> Dashboard
+            </a>
+            <a href="<?= base_url('network/radius') ?>" class="sub-item <?= $csp==='radius'?'active':'' ?>">
+                <i class="fa-solid fa-users"></i> RADIUS Users
+            </a>
+            <a href="<?= base_url('network/radius/profiles') ?>" class="sub-item <?= $csp==='radius_profiles'?'active':'' ?>">
+                <i class="fa-solid fa-folder-tree"></i> RADIUS Profiles
+            </a>
+            <a href="<?= base_url('network/radius/sessions') ?>" class="sub-item <?= $csp==='radius_sessions'?'active':'' ?>">
+                <i class="fa-solid fa-plug-circle-check"></i> Sessions
+            </a>
+            <a href="<?= base_url('network/radius/analytics') ?>" class="sub-item <?= $csp==='radius_analytics'?'active':'' ?>">
+                <i class="fa-solid fa-chart-column"></i> Analytics
+            </a>
+            <a href="<?= base_url('network/radius/audit') ?>" class="sub-item <?= $csp==='radius_audit'?'active':'' ?>">
+                <i class="fa-solid fa-shield-halved"></i> Audit Log
             </a>
         </div>
 
@@ -699,9 +733,37 @@
             </a>
         </div>
 
-        <a href="<?= base_url('workorders') ?>" class="nav-item <?= $cp==='workorders'?'active':'' ?>" data-label="Work Orders">
+        <!-- Work Orders -->
+        <?php $woOpen = $cp === 'workorders'; ?>
+        <div class="nav-item <?= $woOpen?'open':'' ?>" onclick="toggleNav('woMenu',this)" data-label="Work Orders">
             <div class="left-part"><span class="icon"><i class="fa-solid fa-clipboard-list"></i></span><span class="nav-label">Work Orders</span></div>
-        </a>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $woOpen?'open':'' ?>" id="woMenu">
+            <a href="<?= base_url('workorders') ?>" class="sub-item <?= ($cp==='workorders'&&$csp!=='wo-create')?'active':'' ?>">
+                <i class="fa-solid fa-list-check"></i> All Work Orders
+            </a>
+            <a href="<?= base_url('workorders/create') ?>" class="sub-item <?= $csp==='wo-create'?'active':'' ?>">
+                <i class="fa-solid fa-plus"></i> New Work Order
+            </a>
+        </div>
+
+        <!-- Branch Management -->
+        <?php $branchesOpen = $cp === 'branches'; ?>
+        <div class="nav-item <?= $branchesOpen?'open':'' ?>" onclick="toggleNav('branchesMenu',this)" data-label="Branches">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-code-branch"></i></span><span class="nav-label">Branches</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $branchesOpen?'open':'' ?>" id="branchesMenu">
+            <a href="<?= base_url('branches') ?>" class="sub-item <?= ($cp==='branches'&&$csp==='branch-list')?'active':'' ?>">
+                <i class="fa-solid fa-list"></i> All Branches
+            </a>
+            <?php if (PermissionHelper::hasPermission('branches.create')): ?>
+            <a href="<?= base_url('branches/create') ?>" class="sub-item <?= ($cp==='branches'&&$csp==='branch-create')?'active':'' ?>">
+                <i class="fa-solid fa-plus"></i> Add Branch
+            </a>
+            <?php endif; ?>
+        </div>
 
         <!-- HR & Payroll -->
         <?php $hrOpen = $cp === 'hr'; ?>
@@ -731,16 +793,165 @@
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $supportOpen?'open':'' ?>" id="supportMenu">
-            <a href="<?= base_url('support/tickets') ?>" class="sub-item <?= $csp==='tickets'?'active':'' ?>">
-                <i class="fa-solid fa-ticket"></i> Tickets
+            <a href="<?= base_url('support/tickets') ?>" class="sub-item <?= ($cp==='support'&&$csp==='tickets')?'active':'' ?>">
+                <i class="fa-solid fa-ticket"></i> All Tickets
             </a>
-            <a href="<?= base_url('support/tickets/create') ?>" class="sub-item <?= $csp==='ticket-create'?'active':'' ?>">
+            <a href="<?= base_url('support/tickets/create') ?>" class="sub-item <?= ($cp==='support'&&$csp==='ticket-create')?'active':'' ?>">
                 <i class="fa-solid fa-plus"></i> New Ticket
             </a>
-            <a href="<?= base_url('support/dashboard') ?>" class="sub-item <?= $csp==='dashboard'&&$cp==='support'?'active':'' ?>">
+            <a href="<?= base_url('support/dashboard') ?>" class="sub-item <?= ($cp==='support'&&$csp==='support-dashboard')?'active':'' ?>">
                 <i class="fa-solid fa-chart-bar"></i> SLA Dashboard
             </a>
         </div>
+
+        <!-- Tasks -->
+        <?php if (PermissionHelper::hasPermission('tasks.view')): ?>
+        <?php $tasksOpen = $cp === 'tasks'; ?>
+        <div class="nav-item <?= $tasksOpen?'open':'' ?>" onclick="toggleNav('tasksMenu',this)" data-label="Tasks">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-list-check"></i></span><span class="nav-label">Tasks</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $tasksOpen?'open':'' ?>" id="tasksMenu">
+            <a href="<?= base_url('tasks') ?>" class="sub-item <?= ($cp==='tasks'&&$csp==='task-list')?'active':'' ?>">
+                <i class="fa-solid fa-list"></i> All Tasks
+            </a>
+            <a href="<?= base_url('tasks/my') ?>" class="sub-item <?= ($cp==='tasks'&&$csp==='my-tasks')?'active':'' ?>">
+                <i class="fa-solid fa-user-check"></i> My Tasks
+            </a>
+            <a href="<?= base_url('tasks/calendar') ?>" class="sub-item <?= ($cp==='tasks'&&$csp==='task-calendar')?'active':'' ?>">
+                <i class="fa-solid fa-calendar-days"></i> Calendar
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <!-- Sales -->
+        <?php if (PermissionHelper::hasPermission('sales.view')): ?>
+        <?php $salesOpen = $cp === 'sales'; ?>
+        <div class="nav-item <?= $salesOpen?'open':'' ?>" onclick="toggleNav('salesMenu',this)" data-label="Sales">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-file-invoice"></i></span><span class="nav-label">Sales</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $salesOpen?'open':'' ?>" id="salesMenu">
+            <a href="<?= base_url('sales/invoices') ?>" class="sub-item <?= ($cp==='sales'&&$csp==='sales-invoices')?'active':'' ?>">
+                <i class="fa-solid fa-file-invoice"></i> Invoices
+            </a>
+            <a href="<?= base_url('sales/invoices/create') ?>" class="sub-item <?= ($cp==='sales'&&$csp==='sales-invoice-create')?'active':'' ?>">
+                <i class="fa-solid fa-plus"></i> New Invoice
+            </a>
+            <a href="<?= base_url('sales/payments') ?>" class="sub-item <?= ($cp==='sales'&&$csp==='sales-payments')?'active':'' ?>">
+                <i class="fa-solid fa-money-bill-wave"></i> Payments
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <!-- Purchases -->
+        <?php if (PermissionHelper::hasPermission('purchases.view')): ?>
+        <?php $purchasesOpen = $cp === 'purchases'; ?>
+        <div class="nav-item <?= $purchasesOpen?'open':'' ?>" onclick="toggleNav('purchasesMenu',this)" data-label="Purchases">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-cart-shopping"></i></span><span class="nav-label">Purchases</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $purchasesOpen?'open':'' ?>" id="purchasesMenu">
+            <a href="<?= base_url('purchases/vendors') ?>" class="sub-item <?= ($cp==='purchases'&&$csp==='vendors')?'active':'' ?>">
+                <i class="fa-solid fa-truck"></i> Vendors
+            </a>
+            <a href="<?= base_url('purchases/requisitions') ?>" class="sub-item <?= ($cp==='purchases'&&$csp==='requisitions')?'active':'' ?>">
+                <i class="fa-solid fa-clipboard-list"></i> Requisitions
+            </a>
+            <a href="<?= base_url('purchases/bills') ?>" class="sub-item <?= ($cp==='purchases'&&$csp==='bills')?'active':'' ?>">
+                <i class="fa-solid fa-file-invoice-dollar"></i> Bills
+            </a>
+            <a href="<?= base_url('purchases/payments') ?>" class="sub-item <?= ($cp==='purchases'&&$csp==='purchase-payments')?'active':'' ?>">
+                <i class="fa-solid fa-money-bill-wave"></i> Payments
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <!-- Accounts -->
+        <?php if (PermissionHelper::hasPermission('accounts.view')): ?>
+        <?php $accountsOpen = $cp === 'accounts'; ?>
+        <div class="nav-item <?= $accountsOpen?'open':'' ?>" onclick="toggleNav('accountsMenu',this)" data-label="Accounts">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-calculator"></i></span><span class="nav-label">Accounts</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $accountsOpen?'open':'' ?>" id="accountsMenu">
+            <a href="<?= base_url('accounts/expenses') ?>" class="sub-item <?= ($cp==='accounts'&&$csp==='acc-expenses')?'active':'' ?>">
+                <i class="fa-solid fa-receipt"></i> Expenses
+            </a>
+            <a href="<?= base_url('accounts/income') ?>" class="sub-item <?= ($cp==='accounts'&&$csp==='acc-income')?'active':'' ?>">
+                <i class="fa-solid fa-chart-line"></i> Income
+            </a>
+            <a href="<?= base_url('accounts/banks') ?>" class="sub-item <?= ($cp==='accounts'&&$csp==='acc-banks')?'active':'' ?>">
+                <i class="fa-solid fa-building-columns"></i> Bank Accounts
+            </a>
+            <a href="<?= base_url('accounts/reports') ?>" class="sub-item <?= ($cp==='accounts'&&$csp==='acc-reports')?'active':'' ?>">
+                <i class="fa-solid fa-chart-bar"></i> Reports
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <!-- Assets -->
+        <?php if (PermissionHelper::hasPermission('assets.view')): ?>
+        <?php $assetsOpen = $cp === 'assets'; ?>
+        <div class="nav-item <?= $assetsOpen?'open':'' ?>" onclick="toggleNav('assetsMenu',this)" data-label="Assets">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-building"></i></span><span class="nav-label">Assets</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $assetsOpen?'open':'' ?>" id="assetsMenu">
+            <a href="<?= base_url('assets') ?>" class="sub-item <?= ($cp==='assets'&&$csp==='asset-list')?'active':'' ?>">
+                <i class="fa-solid fa-list"></i> Asset Register
+            </a>
+            <a href="<?= base_url('assets/disposals') ?>" class="sub-item <?= ($cp==='assets'&&$csp==='disposals')?'active':'' ?>">
+                <i class="fa-solid fa-trash-can"></i> Disposals
+            </a>
+            <a href="<?= base_url('assets/depreciation') ?>" class="sub-item <?= ($cp==='assets'&&$csp==='depreciation')?'active':'' ?>">
+                <i class="fa-solid fa-arrow-trend-down"></i> Depreciation
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <!-- Bandwidth -->
+        <?php if (PermissionHelper::hasPermission('bandwidth.view')): ?>
+        <?php $bandwidthOpen = $cp === 'bandwidth'; ?>
+        <div class="nav-item <?= $bandwidthOpen?'open':'' ?>" onclick="toggleNav('bandwidthMenu',this)" data-label="Bandwidth">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-signal"></i></span><span class="nav-label">Bandwidth</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $bandwidthOpen?'open':'' ?>" id="bandwidthMenu">
+            <a href="<?= base_url('bandwidth/providers') ?>" class="sub-item <?= ($cp==='bandwidth'&&$csp==='bw-providers')?'active':'' ?>">
+                <i class="fa-solid fa-tower-cell"></i> Providers
+            </a>
+            <a href="<?= base_url('bandwidth/resellers') ?>" class="sub-item <?= ($cp==='bandwidth'&&$csp==='bw-resellers')?'active':'' ?>">
+                <i class="fa-solid fa-handshake"></i> Resellers
+            </a>
+            <a href="<?= base_url('bandwidth/purchases') ?>" class="sub-item <?= ($cp==='bandwidth'&&$csp==='bw-purchases')?'active':'' ?>">
+                <i class="fa-solid fa-cart-shopping"></i> Purchases
+            </a>
+            <a href="<?= base_url('bandwidth/invoices') ?>" class="sub-item <?= ($cp==='bandwidth'&&$csp==='bw-invoices')?'active':'' ?>">
+                <i class="fa-solid fa-file-invoice"></i> Invoices
+            </a>
+        </div>
+        <?php endif; ?>
+
+        <!-- OTT -->
+        <?php if (PermissionHelper::hasPermission('ott.view')): ?>
+        <?php $ottOpen = $cp === 'ott'; ?>
+        <div class="nav-item <?= $ottOpen?'open':'' ?>" onclick="toggleNav('ottMenu',this)" data-label="OTT">
+            <div class="left-part"><span class="icon"><i class="fa-solid fa-tv"></i></span><span class="nav-label">OTT</span></div>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $ottOpen?'open':'' ?>" id="ottMenu">
+            <a href="<?= base_url('ott/providers') ?>" class="sub-item <?= ($cp==='ott'&&$csp==='ott-providers')?'active':'' ?>">
+                <i class="fa-solid fa-satellite-dish"></i> Providers
+            </a>
+            <a href="<?= base_url('ott/packages') ?>" class="sub-item <?= ($cp==='ott'&&$csp==='ott-packages')?'active':'' ?>">
+                <i class="fa-solid fa-box-open"></i> Packages
+            </a>
+            <a href="<?= base_url('ott/subscriptions') ?>" class="sub-item <?= ($cp==='ott'&&$csp==='ott-subscriptions')?'active':'' ?>">
+                <i class="fa-solid fa-users"></i> Subscriptions
+            </a>
+        </div>
+        <?php endif; ?>
 
         <!-- Resellers -->
         <?php $resellerOpen = in_array($cp, ['resellers','mac-resellers']); ?>
@@ -764,10 +975,10 @@
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $autoOpen?'open':'' ?>" id="autoMenu">
-            <a href="<?= base_url('automation') ?>" class="sub-item <?= ($cp==='automation'&&$csp==='dashboard')?'active':'' ?>">
+            <a href="<?= base_url('automation') ?>" class="sub-item <?= ($cp==='automation'&&$csp==='auto-dashboard')?'active':'' ?>">
                 <i class="fa-solid fa-gauge-high"></i> Dashboard
             </a>
-            <a href="<?= base_url('automation/logs') ?>" class="sub-item <?= $csp==='logs'?'active':'' ?>">
+            <a href="<?= base_url('automation/logs') ?>" class="sub-item <?= ($cp==='automation'&&$csp==='auto-logs')?'active':'' ?>">
                 <i class="fa-solid fa-list-ul"></i> Logs
             </a>
         </div>
@@ -779,7 +990,7 @@
             <i class="fa-solid fa-chevron-right chevron"></i>
         </div>
         <div class="submenu <?= $commsOpen?'open':'' ?>" id="commsMenu">
-            <a href="<?= base_url('comms') ?>" class="sub-item <?= ($cp==='comms'&&$csp==='dashboard')?'active':'' ?>">
+            <a href="<?= base_url('comms') ?>" class="sub-item <?= ($cp==='comms'&&$csp==='comms-dashboard')?'active':'' ?>">
                 <i class="fa-solid fa-gauge-high"></i> Dashboard
             </a>
             <a href="<?= base_url('comms/bulk') ?>" class="sub-item <?= $csp==='bulk'?'active':'' ?>">
@@ -791,20 +1002,50 @@
             <a href="<?= base_url('comms/templates') ?>" class="sub-item <?= $csp==='templates'?'active':'' ?>">
                 <i class="fa-solid fa-file-lines"></i> Templates
             </a>
-            <a href="<?= base_url('comms/logs') ?>" class="sub-item <?= $csp==='logs'?'active':'' ?>">
+            <a href="<?= base_url('comms/logs') ?>" class="sub-item <?= $csp==='comms-logs'?'active':'' ?>">
                 <i class="fa-solid fa-list-ul"></i> SMS Logs
             </a>
+            <?php if (PermissionHelper::hasPermission('campaigns.view')): ?>
+            <a href="<?= base_url('campaigns/email') ?>" class="sub-item <?= ($cp==='campaigns'&&$csp==='email-campaigns')?'active':'' ?>">
+                <i class="fa-solid fa-envelope-open-text"></i> Email Campaigns
+            </a>
+            <?php endif; ?>
         </div>
 
         <!-- Settings -->
-        <a href="<?= base_url('settings') ?>" class="nav-item <?= $cp==='settings'?'active':'' ?>" data-label="Settings">
+        <?php $settingsOpen = in_array($cp, ['settings','roles']); ?>
+        <div class="nav-item <?= $settingsOpen?'open':'' ?>" onclick="toggleNav('settingsMenu',this)" data-label="Settings">
             <div class="left-part"><span class="icon"><i class="fa-solid fa-sliders"></i></span><span class="nav-label">Settings</span></div>
-        </a>
-
-        <!-- Roles & Permissions -->
-        <a href="<?= base_url('roles') ?>" class="nav-item <?= $cp==='roles'?'active':'' ?>" data-label="Roles & Permissions">
-            <div class="left-part"><span class="icon"><i class="fa-solid fa-shield-halved"></i></span><span class="nav-label">Roles & Permissions</span></div>
-        </a>
+            <i class="fa-solid fa-chevron-right chevron"></i>
+        </div>
+        <div class="submenu <?= $settingsOpen?'open':'' ?>" id="settingsMenu">
+            <a href="<?= base_url('settings') ?>" class="sub-item <?= ($cp==='settings'&&$csp!=='profiles')?'active':'' ?>">
+                <i class="fa-solid fa-gear"></i> General Settings
+            </a>
+            <a href="<?= base_url('settings#packages') ?>" class="sub-item">
+                <i class="fa-solid fa-wifi"></i> Packages
+            </a>
+            <a href="<?= base_url('settings#branches') ?>" class="sub-item">
+                <i class="fa-solid fa-building"></i> Branches & Zones
+            </a>
+            <a href="<?= base_url('settings#users') ?>" class="sub-item">
+                <i class="fa-solid fa-users-gear"></i> Staff Users
+            </a>
+            <a href="<?= base_url('settings#reseller') ?>" class="sub-item">
+                <i class="fa-solid fa-store"></i> Reseller Panel
+            </a>
+            <a href="<?= base_url('settings/profiles') ?>" class="sub-item <?= $csp==='profiles'?'active':'' ?>">
+                <i class="fa-solid fa-layer-group"></i> PPPoE Profiles
+            </a>
+            <a href="<?= base_url('roles') ?>" class="sub-item <?= $cp==='roles'?'active':'' ?>">
+                <i class="fa-solid fa-shield-halved"></i> Roles & Permissions
+            </a>
+            <?php if (PermissionHelper::hasPermission('configuration.view')): ?>
+            <a href="<?= base_url('configuration') ?>" class="sub-item <?= $cp==='configuration'?'active':'' ?>">
+                <i class="fa-solid fa-sliders"></i> Business Config
+            </a>
+            <?php endif; ?>
+        </div>
 
     </div>
 

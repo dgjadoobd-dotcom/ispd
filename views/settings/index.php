@@ -141,6 +141,10 @@
         <div class="settings-pane" id="pane-ai">
             <div class="card" style="padding:20px;">
                 <div style="font-size:15px;font-weight:700;margin-bottom:18px;"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--purple);margin-right:8px;"></i>AI Assistant Configuration</div>
+
+                <!-- Connection test result -->
+                <div id="aiTestResult" style="display:none;margin-bottom:14px;padding:12px 16px;border-radius:8px;font-size:13px;font-weight:600;"></div>
+
                 <form method="POST" action="<?= base_url('settings/ai') ?>" style="display:grid;gap:14px;">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
                         <div>
@@ -148,37 +152,90 @@
                                 <input type="checkbox" name="ai_enabled" value="1" <?= (env('AI_ENABLED') ? 'checked' : '') ?> style="width:18px;height:18px;">
                                 <span style="font-weight:600;">Enable AI Features</span>
                             </label>
-                            <div style="font-size:12px;color:var(--text2);margin-top:4px;">Requires LM Studio or compatible API server</div>
+                            <div style="font-size:12px;color:var(--text2);margin-top:4px;">Supports Ollama (<code>/api</code>) and OpenAI-compatible (<code>/v1</code>) APIs</div>
                         </div>
-                        <div><label class="form-label">AI API Base URL</label><input type="url" name="ai_base_url" class="form-input" value="<?= htmlspecialchars(env('AI_BASE_URL') ?: 'http://localhost:1234/v1') ?>" placeholder="http://localhost:1234/v1"></div>
-                        <div><label class="form-label">AI Model</label><input type="text" name="ai_model" class="form-input" value="<?= htmlspecialchars(env('AI_MODEL') ?: 'google/gemma-4-e4b') ?>" placeholder="google/gemma-4-e4b"></div>
-                        <div><label class="form-label">API Timeout (seconds)</label><input type="number" name="ai_timeout" class="form-input" value="<?= htmlspecialchars(env('AI_TIMEOUT') ?: 30) ?>" min="5" max="120"></div>
-                    </div>
-                    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;margin-top:8px;">
-                        <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text);">AI Features Status</div>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <i class="fa-solid fa-circle-check" style="color:var(--green);"></i>
-                                <span style="font-size:13px;">Customer Account Insights</span>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <i class="fa-solid fa-circle-check" style="color:var(--green);"></i>
-                                <span style="font-size:13px;">Support Ticket Analysis</span>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <i class="fa-solid fa-circle-check" style="color:var(--green);"></i>
-                                <span style="font-size:13px;">Work Order Assistance</span>
-                            </div>
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <i class="fa-solid fa-circle-check" style="color:var(--green);"></i>
-                                <span style="font-size:13px;">Portal Troubleshooting</span>
-                            </div>
+                        <div>
+                            <label class="form-label">AI API Base URL</label>
+                            <input type="text" name="ai_base_url" id="ai_base_url" class="form-input"
+                                value="<?= htmlspecialchars(env('AI_BASE_URL') ?: 'http://localhost:11434/api') ?>"
+                                placeholder="http://localhost:11434/api">
+                            <div style="font-size:11px;color:var(--text2);margin-top:4px;">Ollama: <code>…:11434/api</code> &nbsp;|&nbsp; LM Studio: <code>…:1234/v1</code></div>
+                        </div>
+                        <div>
+                            <label class="form-label">AI Model</label>
+                            <input type="text" name="ai_model" id="ai_model" class="form-input"
+                                value="<?= htmlspecialchars(env('AI_MODEL') ?: 'gemma3:latest') ?>"
+                                placeholder="gemma3:latest">
+                            <div style="font-size:11px;color:var(--text2);margin-top:4px;" id="aiModelHint">Available models will appear after Test Connection</div>
+                        </div>
+                        <div>
+                            <label class="form-label">API Timeout (seconds)</label>
+                            <input type="number" name="ai_timeout" class="form-input"
+                                value="<?= htmlspecialchars(env('AI_TIMEOUT') ?: 60) ?>" min="5" max="300">
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width:fit-content;"><i class="fa-solid fa-save"></i> Save AI Settings</button>
+
+                    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:16px;">
+                        <div style="font-size:14px;font-weight:600;margin-bottom:8px;color:var(--text);">AI Features</div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+                            <?php foreach(['Customer Account Insights','Support Ticket Analysis','Work Order Assistance','Portal Chat Assistant'] as $f): ?>
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <i class="fa-solid fa-circle-check" style="color:var(--green);"></i>
+                                <span style="font-size:13px;"><?= $f ?></span>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button type="button" class="btn btn-ghost" onclick="testAiConnection()">
+                            <i class="fa-solid fa-plug-circle-check"></i> Test Connection
+                        </button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-save"></i> Save AI Settings</button>
+                    </div>
                 </form>
             </div>
         </div>
+
+        <script>
+        function testAiConnection() {
+            var btn = event.target.closest('button');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Testing…';
+            var res = document.getElementById('aiTestResult');
+            res.style.display = 'none';
+
+            fetch('<?= base_url('settings/ai/test') ?>')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.ok) {
+                        var models = (data.models || []).join(', ') || 'none listed';
+                        res.style.background = 'rgba(16,185,129,0.1)';
+                        res.style.border     = '1px solid var(--green)';
+                        res.style.color      = 'var(--green)';
+                        res.innerHTML = '<i class="fa-solid fa-circle-check"></i> Connected! API type: <strong>' + data.api_type + '</strong> &nbsp;|&nbsp; Models: <strong>' + models + '</strong>';
+                        document.getElementById('aiModelHint').innerHTML = 'Available: <strong>' + models + '</strong>';
+                    } else {
+                        res.style.background = 'rgba(239,68,68,0.1)';
+                        res.style.border     = '1px solid var(--red)';
+                        res.style.color      = 'var(--red)';
+                        res.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Connection failed: ' + (data.error || 'Unknown error');
+                    }
+                    res.style.display = 'block';
+                })
+                .catch(function(e) {
+                    res.style.background = 'rgba(239,68,68,0.1)';
+                    res.style.border     = '1px solid var(--red)';
+                    res.style.color      = 'var(--red)';
+                    res.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Request failed: ' + e.message;
+                    res.style.display = 'block';
+                })
+                .finally(function() {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fa-solid fa-plug-circle-check"></i> Test Connection';
+                });
+        }
+        </script>
 
         <!-- SMS Gateway -->
         <div class="settings-pane" id="pane-sms">

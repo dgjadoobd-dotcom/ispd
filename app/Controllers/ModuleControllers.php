@@ -873,7 +873,7 @@ class ResellerController {
             return;
         }
         $transactions = $this->db->fetchAll(
-            "SELECT *, COALESCE(transaction_date, created_at) as tx_date
+            "SELECT *, transaction_date as tx_date
              FROM reseller_transactions WHERE reseller_id=? ORDER BY id DESC LIMIT 50", [$id]
         );
         $customers = $this->db->fetchAll(
@@ -1336,9 +1336,9 @@ class SettingsController {
 
     public function saveAi(): void {
         $aiEnabled = isset($_POST['ai_enabled']) ? '1' : '0';
-        $aiBaseUrl = sanitize($_POST['ai_base_url'] ?? 'http://localhost:1234/v1');
-        $aiModel = sanitize($_POST['ai_model'] ?? 'google/gemma-4-e4b');
-        $aiTimeout = (int)($_POST['ai_timeout'] ?? 30);
+        $aiBaseUrl = sanitize($_POST['ai_base_url'] ?? 'http://localhost:11434/api');
+        $aiModel   = sanitize($_POST['ai_model']   ?? 'gemma3:latest');
+        $aiTimeout = (int)($_POST['ai_timeout']    ?? 60);
 
         // Update .env file directly since AI settings are environment-based
         $envPath = BASE_PATH . '/.env';
@@ -1353,6 +1353,13 @@ class SettingsController {
 
         $_SESSION['success'] = "AI settings updated successfully.";
         redirect(base_url('settings#ai'));
+    }
+
+    public function testAi(): void {
+        require_once BASE_PATH . '/app/Services/AiService.php';
+        $ai     = new AiService();
+        $result = $ai->testConnection();
+        jsonResponse($result);
     }
 
     public function saveApp(): void {
@@ -2374,9 +2381,11 @@ class MacResellerController {
 
 class RoleController {
     private Database $db;
+    private RoleService $roleService;
 
     public function __construct() {
-        $this->db = Database::getInstance();
+        $this->db          = Database::getInstance();
+        $this->roleService = new RoleService($this->db);
         // Ensure permissions are seeded on first access
         $this->ensureSeeded();
     }
@@ -2631,7 +2640,7 @@ class RoleController {
             return;
         }
 
-        $oldRoleId = $user['role_id'];
+        $oldRoleId = $user['role_id'] !== null ? (int)$user['role_id'] : null;
         $this->db->update('users', ['role_id' => $roleId], 'id=?', [$userId]);
 
         // Reload permissions in session if this is the current user
@@ -2639,13 +2648,30 @@ class RoleController {
             PermissionHelper::loadUserPermissions($userId);
         }
 
-        // Log the change
+        // Resolve old role name for logging
+        $oldRoleName = '';
+        if ($oldRoleId !== null) {
+            $oldRoleRow  = $this->db->fetchOne("SELECT display_name FROM roles WHERE id=?", [$oldRoleId]);
+            $oldRoleName = $oldRoleRow['display_name'] ?? '';
+        }
+
+        // Log to role_change_logs via RoleService
+        $this->roleService->logRoleChange(
+            $userId,
+            $oldRoleId,
+            $roleId,
+            $oldRoleName,
+            $role['display_name'],
+            (int)($_SESSION['user_id'] ?? 0)
+        );
+
+        // Log to activity_logs
         $this->db->insert('activity_logs', [
             'user_id'    => $_SESSION['user_id'] ?? null,
             'action'     => 'user_role_changed',
             'module'     => 'roles',
             'record_id'  => $userId,
-            'old_values' => json_encode(['role_id' => $oldRoleId]),
+            'old_values' => json_encode(['role_id' => $oldRoleId, 'role_name' => $oldRoleName]),
             'new_values' => json_encode(['role_id' => $roleId, 'role_name' => $role['display_name']]),
             'ip_address' => $_SERVER['REMOTE_ADDR'] ?? '',
         ]);
@@ -2684,6 +2710,24 @@ class RoleController {
                 }
             }
         }
+    }
+
+    // ── Role change history for a user ───────────────────────────
+    public function history(string $userId): void {
+        $this->requireSuperAdmin();
+        $pageTitle = 'Role Change History'; $currentPage = 'roles';
+
+        $userId = (int)$userId;
+        $user   = $this->db->fetchOne("SELECT id, full_name, username FROM users WHERE id=?", [$userId]);
+        if (!$user) {
+            $_SESSION['error'] = 'User not found.';
+            redirect(base_url('roles'));
+            return;
+        }
+
+        $history  = $this->roleService->getRoleChangeHistory($userId);
+        $viewFile = BASE_PATH . '/views/roles/history.php';
+        require_once BASE_PATH . '/views/layouts/main.php';
     }
 
     private function requireSuperAdmin(): void {

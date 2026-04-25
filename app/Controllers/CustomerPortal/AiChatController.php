@@ -47,7 +47,7 @@ class AiChatController
         }
 
         // Try AI
-        $aiEnabled = ($_ENV['AI_ENABLED'] ?? 'false') === 'true';
+        $aiEnabled = !empty($_ENV['AI_ENABLED']) && $_ENV['AI_ENABLED'] !== '0' && $_ENV['AI_ENABLED'] !== 'false';
         if ($aiEnabled) {
             $aiReply = $this->callAi($message, $customer);
             if ($aiReply !== null) {
@@ -131,12 +131,11 @@ class AiChatController
         return null; // no rule matched — try AI
     }
 
-    // ── LM Studio / OpenAI-compatible API call ────────────────────
+    // ── AI call via AiService (supports Ollama + OpenAI-compat) ──
     private function callAi(string $message, array $c): ?string
     {
-        $baseUrl = rtrim($_ENV['AI_BASE_URL'] ?? 'http://localhost:1234/v1', '/');
-        $model   = $_ENV['AI_MODEL']   ?? 'local-model';
-        $timeout = (int)($_ENV['AI_TIMEOUT'] ?? 15);
+        require_once BASE_PATH . '/app/Services/AiService.php';
+        $ai = new AiService();
 
         $systemPrompt = "You are a helpful ISP customer support assistant for Digital ISP. "
             . "You are talking to customer: {$c['full_name']} (ID: {$c['customer_code']}). "
@@ -147,37 +146,10 @@ class AiChatController
             . "For technical issues, suggest creating a support ticket. "
             . "Never reveal passwords. Keep responses under 150 words.";
 
-        $payload = json_encode([
-            'model'       => $model,
-            'messages'    => [
-                ['role' => 'system',  'content' => $systemPrompt],
-                ['role' => 'user',    'content' => $message],
-            ],
-            'max_tokens'  => 200,
-            'temperature' => 0.7,
-            'stream'      => false,
-        ]);
-
-        $ch = curl_init("$baseUrl/chat/completions");
-        curl_setopt_array($ch, [
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $payload,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => $timeout,
-            CURLOPT_HTTPHEADER     => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . ($_ENV['AI_API_KEY'] ?? 'lm-studio'),
-            ],
-        ]);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($httpCode !== 200 || !$response) return null;
-
-        $data = json_decode($response, true);
-        return $data['choices'][0]['message']['content'] ?? null;
+        return $ai->getChatCompletion([
+            ['role' => 'system', 'content' => $systemPrompt],
+            ['role' => 'user',   'content' => $message],
+        ], ['max_tokens' => 200, 'temperature' => 0.7]);
     }
 
     // ── Generic fallback ──────────────────────────────────────────

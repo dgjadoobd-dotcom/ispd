@@ -37,6 +37,8 @@ class DashboardController {
         }
         unset($olt);
 
+        $crossModuleWidgets = $this->getCrossModuleWidgets();
+
         $viewFile = BASE_PATH . '/views/dashboard/index.php';
         require_once BASE_PATH . '/views/layouts/main.php';
     }
@@ -207,5 +209,76 @@ class DashboardController {
              LEFT JOIN customers c ON c.package_id = p.id AND c.status='active'
              GROUP BY p.id ORDER BY count DESC LIMIT 6"
         );
+    }
+
+    private function getCrossModuleWidgets(): array {
+        // Open support tickets count
+        $openTickets = 0;
+        try {
+            $openTickets = (int)($this->db->fetchOne(
+                "SELECT COUNT(*) as c FROM support_tickets WHERE status IN ('open','in_progress')"
+            )['c'] ?? 0);
+        } catch (\Exception $e) {
+            // Table may not exist yet
+        }
+
+        // Overdue tasks count
+        $overdueTasks = 0;
+        try {
+            $overdueTasks = (int)($this->db->fetchOne(
+                "SELECT COUNT(*) as c FROM tasks WHERE status NOT IN ('completed','cancelled') AND due_date < DATE('now')"
+            )['c'] ?? 0);
+        } catch (\Exception $e) {
+            // Table may not exist yet
+        }
+
+        // Low stock items count
+        $lowStockItems = 0;
+        try {
+            $lowStockItems = (int)($this->db->fetchOne(
+                "SELECT COUNT(*) as c FROM inventory_items WHERE quantity <= reorder_level AND reorder_level > 0"
+            )['c'] ?? 0);
+        } catch (\Exception $e) {
+            // Table may not exist yet
+        }
+
+        // Pending purchase requisitions count
+        $pendingRequisitions = 0;
+        try {
+            $pendingRequisitions = (int)($this->db->fetchOne(
+                "SELECT COUNT(*) as c FROM purchase_requisitions WHERE status = 'pending'"
+            )['c'] ?? 0);
+        } catch (\Exception $e) {
+            // Table may not exist yet
+        }
+
+        // Assets nearing warranty expiry (within 30 days)
+        $warrantyExpiring = 0;
+        try {
+            $warrantyExpiring = (int)($this->db->fetchOne(
+                "SELECT COUNT(*) as c FROM assets WHERE warranty_expiry BETWEEN DATE('now') AND DATE('now', '+30 days') AND status != 'disposed'"
+            )['c'] ?? 0);
+        } catch (\Exception $e) {
+            // Table may not exist yet
+        }
+
+        // Active OTT subscriptions count
+        $activeOttSubs = 0;
+        try {
+            $activeOttSubs = (int)($this->db->fetchOne(
+                "SELECT COUNT(*) as c FROM ott_subscriptions WHERE status = 'active'"
+            )['c'] ?? 0);
+        } catch (\Exception $e) {
+            // Table may not exist yet
+        }
+
+        return [
+            'open_tickets'        => $openTickets,
+            'overdue_tasks'       => $overdueTasks,
+            'low_stock_items'     => $lowStockItems,
+            'pending_requisitions'=> $pendingRequisitions,
+            'warranty_expiring'   => $warrantyExpiring,
+            'active_ott_subs'     => $activeOttSubs,
+        ];
     }
 }

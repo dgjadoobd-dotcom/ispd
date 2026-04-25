@@ -13,7 +13,7 @@ class AutomationController {
     public function index(): void {
         $pageTitle   = 'Automation';
         $currentPage = 'automation';
-        $currentSubPage = 'dashboard';
+        $currentSubPage = 'auto-dashboard';
 
         $stats = $this->automation->getStats();
         $logs  = $this->automation->getRecentLogs(15);
@@ -66,7 +66,7 @@ class AutomationController {
     public function logs(): void {
         $pageTitle   = 'Automation Logs';
         $currentPage = 'automation';
-        $currentSubPage = 'logs';
+        $currentSubPage = 'auto-logs';
 
         $page    = max(1, (int)($_GET['page'] ?? 1));
         $perPage = 50;

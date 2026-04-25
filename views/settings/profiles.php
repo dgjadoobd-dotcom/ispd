@@ -54,8 +54,8 @@
             <tr>
                 <td style="text-align:center;font-weight:600;color:var(--text2);"><?= $sl++ ?></td>
                 <td style="font-weight:700;font-family:monospace;color:var(--blue);"><?= htmlspecialchars($p['name']) ?></td>
-                <td><span class="badge badge-green"><?= number_format($p['speed_download']) ?> Mbps ↓</span></td>
-                <td><span class="badge badge-blue"><?= number_format($p['speed_upload']) ?> Mbps ↑</span></td>
+                <td><span class="badge badge-green"><?= htmlspecialchars($p['speed_download']) ?> Mbps ↓</span></td>
+                <td><span class="badge badge-blue"><?= htmlspecialchars($p['speed_upload']) ?> Mbps ↑</span></td>
                 <td style="font-size:12px;color:var(--text2);"><?= htmlspecialchars($p['nas_name'] ?? 'All Servers') ?></td>
                 <td style="font-size:12px;color:var(--text2);"><?= htmlspecialchars($p['description'] ?? '—') ?></td>
                 <td><span class="badge <?= $p['is_active'] ? 'badge-green' : 'badge-gray' ?>"><?= $p['is_active'] ? 'Active' : 'Inactive' ?></span></td>

@@ -217,13 +217,85 @@ class PortalSupportController extends PortalController {
 
     public function getCategories(): void {
         $categories = [
-            ['value' => 'billing', 'label' => 'Billing Issue'],
-            ['value' => 'technical', 'label' => 'Technical Support'],
-            ['value' => 'complaint', 'label' => 'Complaint'],
-            ['value' => 'general', 'label' => 'General Inquiry'],
+            ['value' => 'billing',        'label' => 'Billing Issue'],
+            ['value' => 'technical',      'label' => 'Technical Support'],
+            ['value' => 'complaint',      'label' => 'Complaint'],
+            ['value' => 'general',        'label' => 'General Inquiry'],
             ['value' => 'new_connection', 'label' => 'New Connection Request'],
-            ['value' => 'disconnection', 'label' => 'Disconnection Request'],
+            ['value' => 'package_change', 'label' => 'Package Upgrade / Downgrade'],
+            ['value' => 'disconnection',  'label' => 'Disconnection Request'],
         ];
         $this->jsonResponse(['categories' => $categories]);
+    }
+
+    // ── Package Change Request ────────────────────────────────────
+
+    public function packageChangeForm(): void {
+        $this->requireAuth();
+        $customer   = $this->getCustomer();
+        $packages   = $this->db->fetchAll(
+            "SELECT id, name, speed_download, speed_upload, price FROM packages WHERE is_active=1 ORDER BY price ASC"
+        );
+        $currentPkg = null;
+        if (!empty($customer['package_id'])) {
+            $currentPkg = $this->db->fetchOne("SELECT * FROM packages WHERE id=?", [$customer['package_id']]);
+        }
+
+        $pageTitle      = 'Package Change Request';
+        $currentPage    = 'support';
+        $portalCustomer = $customer;
+        $content        = BASE_PATH . '/views/portal/support/package_change_content.php';
+        require_once BASE_PATH . '/views/portal/layouts/main.php';
+    }
+
+    public function packageChangeStore(): void {
+        $this->requireAuth();
+
+        $customerId  = $this->getCustomerId();
+        $customer    = $this->getCustomer();
+        $newPkgId    = (int)($_POST['new_package_id'] ?? 0);
+        $changeType  = sanitize($_POST['change_type'] ?? 'upgrade');
+        $reason      = sanitize($_POST['reason'] ?? '');
+
+        if (!$newPkgId) {
+            $_SESSION['portal_error'] = 'Please select a package.';
+            redirect(base_url('portal/package-change'));
+            return;
+        }
+
+        $newPkg = $this->db->fetchOne("SELECT * FROM packages WHERE id=? AND is_active=1", [$newPkgId]);
+        if (!$newPkg) {
+            $_SESSION['portal_error'] = 'Selected package not found.';
+            redirect(base_url('portal/package-change'));
+            return;
+        }
+
+        $currentPkg = null;
+        if (!empty($customer['package_id'])) {
+            $currentPkg = $this->db->fetchOne("SELECT name FROM packages WHERE id=?", [$customer['package_id']]);
+        }
+
+        $changeLabel = $changeType === 'upgrade' ? 'Upgrade' : 'Downgrade';
+        $subject     = "Package {$changeLabel} Request — {$customer['full_name']}";
+        $description = "Customer requests package {$changeLabel}.\n"
+            . "Current Package: " . ($currentPkg['name'] ?? 'None') . "\n"
+            . "Requested Package: {$newPkg['name']} (৳" . number_format($newPkg['price'], 0) . "/mo)\n"
+            . "Reason: {$reason}";
+
+        $ticketNum = 'TKT-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+
+        $this->db->insert('support_tickets', [
+            'ticket_number' => $ticketNum,
+            'customer_id'   => $customerId,
+            'branch_id'     => $customer['branch_id'] ?? 1,
+            'category'      => 'package_change',
+            'priority'      => 'normal',
+            'subject'       => $subject,
+            'description'   => $description,
+            'status'        => 'open',
+        ]);
+
+        $_SESSION['portal_success'] = "Your package {$changeLabel} request has been submitted. Our team will process it within 24 hours.";
+        redirect(base_url('portal/support'));
     }
 }

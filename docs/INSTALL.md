@@ -12,14 +12,15 @@
 
 ## Requirements
 
-| Component | Minimum |
-|-----------|---------|
-| PHP | 8.1 – 8.3 |
-| Database | SQLite 3 (built-in) or MySQL 5.7+ / MariaDB 10.4+ |
-| Extensions | PDO, pdo_sqlite, pdo_mysql, cURL, OpenSSL, Mbstring, JSON, BCMath |
-| Web Server | Apache 2.4+ or Nginx 1.18+ |
-| RAM | 512 MB minimum, 1 GB recommended |
-| Disk | 500 MB minimum |
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| PHP | 8.1 | 8.3 (Ubuntu 24.04 default) |
+| Database | SQLite 3 (local/dev) or MySQL 8.0+ | MySQL 8.0 |
+| PHP Extensions | `pdo`, `pdo_mysql`, `mbstring`, `curl`, `gd`, `zip`, `sqlite3`, `redis` | All listed |
+| Web Server | Apache 2.4+ or Nginx 1.18+ | Nginx (Ubuntu 24.04) |
+| OS | Ubuntu 22.04+ / any Linux | Ubuntu 24.04 LTS |
+| RAM | 512 MB | 2 GB |
+| Disk | 500 MB | 5 GB |
 
 ---
 
@@ -65,7 +66,7 @@ Add to `C:\Windows\System32\drivers\etc\hosts`:
 ```
 127.0.0.1  billing.local
 ```
-Restart Apache. Access: `http://billing.local:8088`
+Restart Apache. Access: `http://billing.local:8000`
 
 ### Cron Jobs (Windows Task Scheduler)
 Run as Administrator:
@@ -135,109 +136,156 @@ RewriteRule ^ index.php [QSA,L]
 
 ## Ubuntu Server
 
-### Step 1 — Install Dependencies
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y apache2 php8.2 php8.2-cli php8.2-pdo php8.2-sqlite3 \
-  php8.2-mysql php8.2-curl php8.2-mbstring php8.2-xml php8.2-bcmath \
-  php8.2-snmp php8.2-zip php8.2-gd libapache2-mod-php8.2 \
-  mysql-server unzip git
-sudo a2enmod rewrite
-sudo systemctl restart apache2
-```
+> **Recommended:** Ubuntu 24.04 LTS (Noble Numbat) with PHP 8.3. The steps below use the automated provisioning script. For Ubuntu 22.04 or manual setup, see the legacy notes at the end of this section.
 
-### Step 2 — Clone / Upload Project
+### Step 1 — Clone the repository
+
 ```bash
 cd /var/www
-sudo git clone https://github.com/yourrepo/digital-isp-erp.git ispd
-# OR upload via SFTP and extract
-sudo chown -R www-data:www-data /var/www/ispd
-sudo chmod -R 755 /var/www/ispd
-sudo chmod -R 775 /var/www/ispd/database /var/www/ispd/storage
+sudo git clone https://github.com/dgjadoobd-dotcom/ispd.git digital-isp
+sudo chown -R www-data:www-data /var/www/digital-isp
 ```
 
-### Step 3 — Apache Virtual Host
+### Step 2 — Run the one-time provisioning script
+
 ```bash
-sudo nano /etc/apache2/sites-available/ispd.conf
+cd /var/www/digital-isp
+sudo bash setup-ubuntu24.sh
 ```
-```apache
-<VirtualHost *:80>
-    ServerName billing.yourdomain.com
-    DocumentRoot /var/www/ispd/public
 
-    <Directory /var/www/ispd/public>
-        AllowOverride All
-        Require all granted
-    </Directory>
+`setup-ubuntu24.sh` installs and configures everything in one shot:
 
-    ErrorLog ${APACHE_LOG_DIR}/ispd_error.log
-    CustomLog ${APACHE_LOG_DIR}/ispd_access.log combined
-</VirtualHost>
-```
+| What | Details |
+|------|---------|
+| PHP 8.3 + extensions | `php8.3-fpm`, `mysql`, `mbstring`, `curl`, `gd`, `zip`, `xml`, `redis`, `sqlite3` |
+| Web server | `nginx` — site config symlinked to `/etc/nginx/sites-enabled/digital-isp` |
+| Database client | `mysql-client` |
+| Python agent | `python3-venv` — creates `agent/venv`, installs `agent/requirements.txt` |
+| systemd service | `/etc/systemd/system/digital-isp-agent.service` (enabled, starts on boot) |
+| Log rotation | `/etc/logrotate.d/digital-isp` (daily, 30-day retention, USR1 reload) |
+
+### Step 3 — Configure environment
+
 ```bash
-sudo a2ensite ispd.conf
-sudo systemctl reload apache2
+sudo cp .env.example .env.production
+sudo nano .env.production
 ```
 
-### Step 4 — MySQL Setup (if using MySQL)
+Required variables (see `.env.example` for the full annotated list):
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://yourdomain.com
+APP_KEY=base64:REPLACE_WITH_RANDOM_BASE64_KEY   # php -r "echo 'base64:'.base64_encode(random_bytes(32)).PHP_EOL;"
+APP_TIMEZONE=Asia/Dhaka
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=digital_isp
+DB_USERNAME=ispd_user
+DB_PASSWORD=REPLACE_WITH_DB_PASSWORD
+
+JWT_SECRET=REPLACE_WITH_RANDOM_SECRET_MIN_32_CHARS   # openssl rand -hex 32
+```
+
+### Step 4 — Create the MySQL database
+
 ```bash
 sudo mysql -u root
 ```
 ```sql
 CREATE DATABASE digital_isp CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'ispd'@'localhost' IDENTIFIED BY 'StrongPassword123!';
-GRANT ALL PRIVILEGES ON digital_isp.* TO 'ispd'@'localhost';
+CREATE USER 'ispd_user'@'localhost' IDENTIFIED BY 'StrongPassword123!';
+GRANT ALL PRIVILEGES ON digital_isp.* TO 'ispd_user'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
 
-### Step 5 — Run Installer
-```
-http://billing.yourdomain.com/install.php
-```
+### Step 5 — Deploy
 
-### Step 6 — SSL (Let's Encrypt)
 ```bash
-sudo apt install -y certbot python3-certbot-apache
-sudo certbot --apache -d billing.yourdomain.com
+sudo bash deploy-prod.sh
 ```
 
-### Step 7 — Cron Jobs
+The deploy script automatically:
+- Validates all required env vars (reports all failures at once, never stops at first)
+- Checks PHP ≥ 8.1 and all required packages are installed
+- Backs up the database **before** pulling new code
+- Runs `composer install --no-dev --optimize-autoloader`
+- Sets correct file permissions (`www-data:www-data`, `.env` → `root:www-data 640`)
+- Applies SQL migrations idempotently via `_migrations` tracking table
+- Installs cron jobs for `www-data` (idempotent — no duplicates on re-run)
+- Reloads `php8.3-fpm` (auto-falls back to 8.2 / 8.1 if needed)
+- Runs a health check and shows the last 50 log lines on failure
+
+### Step 6 — Enable HTTPS
+
 ```bash
-sudo crontab -e -u www-data
-```
-Add:
-```cron
-0 0 * * *    /usr/bin/php /var/www/ispd/cron_automation.php >> /var/www/ispd/storage/logs/automation_cron.log 2>&1
-*/15 * * * * /usr/bin/php /var/www/ispd/cron_selfhosted_piprapay.php >> /var/www/ispd/storage/logs/selfhosted_piprapay_cron.log 2>&1
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.com
+# Then uncomment the HTTPS server block in /etc/nginx/sites-available/digital-isp
+sudo nginx -t && sudo systemctl reload nginx
 ```
 
-### Step 8 — Firewall
+### Step 7 — Firewall
+
 ```bash
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw allow 8088/tcp   # if using custom port
 sudo ufw enable
+```
+
+### Step 8 — Start the Python agent
+
+```bash
+sudo systemctl start digital-isp-agent
+journalctl -u digital-isp-agent -f   # view logs
+```
+
+---
+
+### Ubuntu 22.04 / Manual setup (legacy)
+
+If you cannot use `setup-ubuntu24.sh`, install dependencies manually:
+
+```bash
+sudo apt update && sudo apt install -y \
+  php8.1-fpm php8.1-mysql php8.1-mbstring php8.1-curl php8.1-gd \
+  php8.1-zip php8.1-xml php8.1-sqlite3 nginx mysql-client git curl composer
+```
+
+Then configure Nginx manually using `docker/nginx/nginx-ubuntu24.conf` as a template (change the FPM socket to `/run/php/php8.1-fpm.sock`), and add cron jobs manually:
+
+```bash
+sudo crontab -e -u www-data
+```
+```cron
+0 0 * * *   /usr/bin/php8.1 /var/www/digital-isp/cron_automation.php >> .../automation_cron.log 2>&1
+0 8 * * *   /usr/bin/php8.1 /var/www/digital-isp/cron_automation.php due-reminders >> ...
+0 */6 * * * /usr/bin/php8.1 /var/www/digital-isp/cron_automation.php suspend >> ...
+5 0 * * *   /usr/bin/php8.1 /var/www/digital-isp/cron_radius_rollup.php >> ...
+10 0 * * *  /usr/bin/php8.1 /var/www/digital-isp/cron_selfhosted_piprapay.php >> ...
 ```
 
 ---
 
 ## Post-Install Checklist
 
-After completing the installer:
+After completing setup:
 
-- [ ] **Delete** `public/install.php` from the server
-- [ ] Log in at your App URL with the admin credentials
+- [ ] Log in at your App URL with the admin credentials (`admin` / `Admin@1234`)
+- [ ] **Change the default admin password immediately**
 - [ ] Go to **Settings → General** — verify company name and URL
 - [ ] Go to **Settings → Payment Gateways** — enable Self-Hosted PipraPay, set webhook secret
 - [ ] Go to **Network → MikroTik / NAS** — add your MikroTik router
-- [ ] Go to **GPON → OLTs** — add your OLT device
-- [ ] Set up the PipraPay panel at `http://piprapay.yourdomain.com:8090`
-  - Run: `php migrate_selfhosted_piprapay.php`
-  - Visit the paybill installer at `/install`
-- [ ] Change the default admin password
-- [ ] Set `APP_DEBUG=false` in `.env` (production)
-- [ ] Verify cron jobs are running
+- [ ] Go to **GPON/EPON → OLTs** — add your OLT device
+- [ ] Verify cron jobs are running: `crontab -l -u www-data`
+- [ ] Verify PHP agent service: `systemctl status digital-isp-agent`
+- [ ] Confirm `APP_DEBUG=false` in `.env` (production)
+- [ ] Confirm `.env` permissions: `stat .env` should show `640` owned by `root:www-data`
+- [ ] Run a health check: `curl https://yourdomain.com/health`
 
 ---
 
@@ -264,15 +312,15 @@ echo 'Password reset to Admin@1234';
 
 ### Database permission error (SQLite)
 ```bash
-sudo chown www-data:www-data database/digital-isp.sqlite
-sudo chmod 664 database/digital-isp.sqlite
+sudo chown www-data:www-data database/digital_isp.sqlite
+sudo chmod 664 database/digital_isp.sqlite
 sudo chmod 775 database/
 ```
 
 ### "Cannot write .env file"
 ```bash
-sudo chmod 775 /var/www/ispd
-sudo chown www-data:www-data /var/www/ispd
+sudo chmod 775 /var/www/digital-isp
+sudo chown www-data:www-data /var/www/digital-isp
 ```
 
 ### MikroTik connection fails
@@ -288,13 +336,16 @@ sudo chown www-data:www-data /var/www/ispd
 ### Cron not running
 ```bash
 # Check cron log
-tail -f /var/www/ispd/storage/logs/automation_cron.log
+tail -f /var/www/digital-isp/storage/logs/automation_cron.log
 
 # Test manually
-php /var/www/ispd/cron_automation.php
+/usr/bin/php8.3 /var/www/digital-isp/cron_automation.php
 
 # Verify crontab
 crontab -l -u www-data
+
+# Re-install cron jobs via helper
+sudo bash -c 'source /var/www/digital-isp/scripts/deploy-helpers.sh && install_cron_jobs /var/www/digital-isp'
 ```
 
 ---

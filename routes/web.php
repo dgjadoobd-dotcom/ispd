@@ -19,6 +19,10 @@ Router::get('/api/dashboard/live-stats', 'DashboardController@getLiveNetworkStat
 Router::prefix('/customers', function() {
     Router::get('', 'CustomerController@index', ['AuthMiddleware']);
     Router::get('/search', 'CustomerController@apiSearch', ['AuthMiddleware']);
+    Router::get('/requests', 'CustomerController@requests', ['AuthMiddleware']);
+    Router::post('/requests/approve/{id}', 'CustomerController@approveRequest', ['AuthMiddleware']);
+    Router::post('/requests/reject/{id}', 'CustomerController@rejectRequest', ['AuthMiddleware']);
+    Router::post('/requests/pkg-approve/{id}', 'CustomerController@approvePackageChange', ['AuthMiddleware']);
     Router::get('/create', 'CustomerController@create', ['AuthMiddleware']);
     Router::post('/store', 'CustomerController@store', ['AuthMiddleware']);
     Router::get('/view/{id}', 'CustomerController@view', ['AuthMiddleware']);
@@ -30,6 +34,10 @@ Router::prefix('/customers', function() {
     Router::post('/import', 'CustomerController@import', ['AuthMiddleware']);
     Router::get('/download-template', 'CustomerController@downloadTemplate', ['AuthMiddleware']);
 });
+
+// ── Online Signup (public — no auth required) ─────────────────────
+Router::get('/signup', 'CustomerController@signupForm');
+Router::post('/signup', 'CustomerController@signupStore');
 
 // ── Billing ───────────────────────────────────────────────────────
 Router::prefix('/billing', function() {
@@ -162,6 +170,63 @@ Router::prefix('/inventory', function() {
     Router::post('/suppliers/delete/{id}', 'InventoryController@deleteSupplier', ['AuthMiddleware']);
 });
 
+// ── Configuration ──────────────────────────────────────────────
+Router::prefix('/configuration', function() {
+    Router::get('', 'ConfigurationController@index', ['AuthMiddleware']);
+    Router::get('/zones/create', 'ConfigurationController@createZone', ['AuthMiddleware']);
+    Router::post('/zones/store', 'ConfigurationController@storeZone', ['AuthMiddleware']);
+    Router::get('/zones/edit/{id}', 'ConfigurationController@editZone', ['AuthMiddleware']);
+    Router::post('/zones/update/{id}', 'ConfigurationController@updateZone', ['AuthMiddleware']);
+    Router::post('/zones/delete/{id}', 'ConfigurationController@deleteZone', ['AuthMiddleware']);
+    Router::get('/pops/create', 'ConfigurationController@createPop', ['AuthMiddleware']);
+    Router::post('/pops/store', 'ConfigurationController@storePop', ['AuthMiddleware']);
+    Router::get('/pops/edit/{id}', 'ConfigurationController@editPop', ['AuthMiddleware']);
+    Router::post('/pops/update/{id}', 'ConfigurationController@updatePop', ['AuthMiddleware']);
+    Router::get('/packages/create', 'ConfigurationController@createPackage', ['AuthMiddleware']);
+    Router::post('/packages/store', 'ConfigurationController@storePackage', ['AuthMiddleware']);
+    Router::get('/packages/edit/{id}', 'ConfigurationController@editPackage', ['AuthMiddleware']);
+    Router::post('/packages/update/{id}', 'ConfigurationController@updatePackage', ['AuthMiddleware']);
+    Router::post('/settings', 'ConfigurationController@saveSettings', ['AuthMiddleware']);
+});
+
+// ── Bandwidth ───────────────────────────────────────────────
+Router::prefix('/bandwidth', function() {
+    Router::get('', 'BandwidthController@index', ['AuthMiddleware']);
+    Router::get('/providers', 'BandwidthController@providers', ['AuthMiddleware']);
+    Router::get('/providers/create', 'BandwidthController@createProvider', ['AuthMiddleware']);
+    Router::post('/providers/store', 'BandwidthController@storeProvider', ['AuthMiddleware']);
+    Router::get('/providers/edit/{id}', 'BandwidthController@editProvider', ['AuthMiddleware']);
+    Router::post('/providers/update/{id}', 'BandwidthController@updateProvider', ['AuthMiddleware']);
+    Router::get('/resellers', 'BandwidthController@resellers', ['AuthMiddleware']);
+    Router::get('/resellers/create', 'BandwidthController@createReseller', ['AuthMiddleware']);
+    Router::post('/resellers/store', 'BandwidthController@storeReseller', ['AuthMiddleware']);
+    Router::get('/resellers/edit/{id}', 'BandwidthController@editReseller', ['AuthMiddleware']);
+    Router::post('/resellers/update/{id}', 'BandwidthController@updateReseller', ['AuthMiddleware']);
+    Router::get('/purchases', 'BandwidthController@purchases', ['AuthMiddleware']);
+    Router::post('/purchases/store', 'BandwidthController@storePurchase', ['AuthMiddleware']);
+    Router::get('/invoices', 'BandwidthController@invoices', ['AuthMiddleware']);
+    Router::get('/invoices/view/{id}', 'BandwidthController@viewInvoice', ['AuthMiddleware']);
+});
+
+// ── Purchases ─────────────────────────────────────────────────
+Router::prefix('/purchases', function() {
+    Router::get('', 'PurchaseController@vendors', ['AuthMiddleware']);
+    Router::get('/vendors', 'PurchaseController@vendors', ['AuthMiddleware']);
+    Router::get('/vendors/create', 'PurchaseController@createVendor', ['AuthMiddleware']);
+    Router::post('/vendors/store', 'PurchaseController@storeVendor', ['AuthMiddleware']);
+    Router::get('/vendors/edit/{id}', 'PurchaseController@editVendor', ['AuthMiddleware']);
+    Router::post('/vendors/update/{id}', 'PurchaseController@updateVendor', ['AuthMiddleware']);
+    Router::get('/bills', 'PurchaseController@bills', ['AuthMiddleware']);
+    Router::get('/bills/create', 'PurchaseController@createBill', ['AuthMiddleware']);
+    Router::post('/bills/store', 'PurchaseController@storeBill', ['AuthMiddleware']);
+    Router::get('/bills/view/{id}', 'PurchaseController@viewBill', ['AuthMiddleware']);
+    Router::post('/bills/payment/{id}', 'PurchaseController@recordPayment', ['AuthMiddleware']);
+    Router::get('/ledger', 'PurchaseController@ledger', ['AuthMiddleware']);
+    Router::get('/reports', 'PurchaseController@reports', ['AuthMiddleware']);
+    Router::get('/requisitions', function() { $_SESSION['error'] = 'Requisitions module not yet implemented.'; redirect(base_url('purchases/vendors')); }, ['AuthMiddleware']);
+    Router::get('/payments', function() { $_SESSION['error'] = 'Use Bills to view payment history.'; redirect(base_url('purchases/bills')); }, ['AuthMiddleware']);
+});
+
 // ── Resellers ─────────────────────────────────────────────────────
 Router::prefix('/resellers', function() {
     Router::get('', 'ResellerController@index', ['AuthMiddleware']);
@@ -218,6 +283,18 @@ Router::prefix('/reports', function() {
     Router::get('/due', 'ReportController@due', ['AuthMiddleware']);
     Router::get('/collection', 'ReportController@collection', ['AuthMiddleware']);
     Router::get('/customers', 'ReportController@customers', ['AuthMiddleware']);
+
+    // ── BTRC Reports ──────────────────────────────────────────
+    Router::prefix('/btrc', function() {
+        Router::get('', 'BtrcReportController@index', ['AuthMiddleware']);
+        Router::get('/generate', 'BtrcReportController@generateForm', ['AuthMiddleware']);
+        Router::post('/generate', 'BtrcReportController@generate', ['AuthMiddleware']);
+        Router::get('/preview', 'BtrcReportController@preview', ['AuthMiddleware']);
+        Router::get('/view/{id}', 'BtrcReportController@view', ['AuthMiddleware']);
+        Router::post('/finalise/{id}', 'BtrcReportController@finalise', ['AuthMiddleware']);
+        Router::get('/export/csv/{id}', 'BtrcReportController@exportCsv', ['AuthMiddleware']);
+        Router::get('/export/pdf/{id}', 'BtrcReportController@exportPdf', ['AuthMiddleware']);
+    });
 });
 
 // ── Finance ───────────────────────────────────────────────────────
@@ -300,6 +377,21 @@ Router::prefix('/hr', function() {
     Router::post('/departments/delete/{id}', 'HrController@deleteDepartment', ['AuthMiddleware']);
 });
 
+// ── Branch Management ─────────────────────────────────────────────
+Router::prefix('/branches', function() {
+    Router::get('', 'BranchController@list', ['AuthMiddleware']);
+    Router::get('/create', 'BranchController@create', ['AuthMiddleware']);
+    Router::post('/store', 'BranchController@store', ['AuthMiddleware']);
+    Router::get('/view/{id}', 'BranchController@view', ['AuthMiddleware']);
+    Router::get('/edit/{id}', 'BranchController@edit', ['AuthMiddleware']);
+    Router::post('/update/{id}', 'BranchController@update', ['AuthMiddleware']);
+    Router::post('/deactivate/{id}', 'BranchController@deactivate', ['AuthMiddleware']);
+    Router::post('/activate/{id}', 'BranchController@activate', ['AuthMiddleware']);
+    Router::post('/report/{id}', 'BranchController@generateReport', ['AuthMiddleware']);
+    Router::post('/credential/{id}', 'BranchController@assignCredential', ['AuthMiddleware']);
+    Router::get('/export/{id}', 'BranchController@exportCsv', ['AuthMiddleware']);
+});
+
 // ── Support & Ticketing ───────────────────────────────────────────
 Router::prefix('/support', function() {
     Router::get('', 'SupportController@index', ['AuthMiddleware']);
@@ -319,6 +411,39 @@ Router::prefix('/support', function() {
     Router::post('/check-sla', 'SupportController@checkSla', ['AuthMiddleware']);
 });
 
+// ── Task Management ────────────────────────────────────────────────
+Router::prefix('/tasks', function() {
+    Router::get('', 'TaskController@index', ['AuthMiddleware']);
+    Router::get('/list', 'TaskController@list', ['AuthMiddleware']);
+    Router::get('/create', 'TaskController@create', ['AuthMiddleware']);
+    Router::post('/store', 'TaskController@store', ['AuthMiddleware']);
+    Router::get('/view/{id}', 'TaskController@view', ['AuthMiddleware']);
+    Router::get('/edit/{id}', 'TaskController@edit', ['AuthMiddleware']);
+    Router::post('/update/{id}', 'TaskController@update', ['AuthMiddleware']);
+    Router::post('/assign/{id}', 'TaskController@assign', ['AuthMiddleware']);
+    Router::post('/status/{id}', 'TaskController@status', ['AuthMiddleware']);
+    Router::post('/delete/{id}', 'TaskController@delete', ['AuthMiddleware']);
+    Router::get('/calendar', 'TaskController@calendar', ['AuthMiddleware']);
+    Router::post('/bulk-assign', 'TaskController@bulkAssign', ['AuthMiddleware']);
+    Router::get('/reports', 'TaskController@reports', ['AuthMiddleware']);
+});
+
+// ── Sales & Invoicing ───────────────────────────────────────────────
+Router::prefix('/sales', function() {
+    Router::get('', 'SalesInvoiceController@index', ['AuthMiddleware']);
+    Router::get('/invoices', 'SalesInvoiceController@invoices', ['AuthMiddleware']);
+    Router::get('/create', 'SalesInvoiceController@create', ['AuthMiddleware']);
+    Router::post('/store', 'SalesInvoiceController@store', ['AuthMiddleware']);
+    Router::get('/view/{id}', 'SalesInvoiceController@view', ['AuthMiddleware']);
+    Router::get('/edit/{id}', 'SalesInvoiceController@edit', ['AuthMiddleware']);
+    Router::post('/update/{id}', 'SalesInvoiceController@update', ['AuthMiddleware']);
+    Router::post('/payment/{id}', 'SalesInvoiceController@recordPayment', ['AuthMiddleware']);
+    Router::post('/cancel/{id}', 'SalesInvoiceController@cancel', ['AuthMiddleware']);
+    Router::get('/print/{id}', 'SalesInvoiceController@printInvoice', ['AuthMiddleware']);
+    Router::get('/payments', 'SalesInvoiceController@payments', ['AuthMiddleware']);
+    Router::get('/reports', 'SalesInvoiceController@reports', ['AuthMiddleware']);
+});
+
 // ── Roles & Permissions ───────────────────────────────────────────
 Router::prefix('/roles', function() {
     Router::get('', 'RoleController@index', ['AuthMiddleware']);
@@ -331,6 +456,7 @@ Router::prefix('/roles', function() {
     Router::get('/users/{id}', 'RoleController@users', ['AuthMiddleware']);
     Router::post('/assign-user', 'RoleController@assignUser', ['AuthMiddleware']);
     Router::post('/seed', 'RoleController@seed', ['AuthMiddleware']);
+    Router::get('/history/{userId}', 'RoleController@history', ['AuthMiddleware']);
 });
 
 // ── Settings ──────────────────────────────────────────────────────
@@ -339,6 +465,7 @@ Router::prefix('/settings', function() {
     Router::post('/general', 'SettingsController@saveGeneral', ['AuthMiddleware']);
     Router::post('/app', 'SettingsController@saveApp', ['AuthMiddleware']);
     Router::post('/ai', 'SettingsController@saveAi', ['AuthMiddleware']);
+    Router::get('/ai/test', 'SettingsController@testAi', ['AuthMiddleware']);
     Router::post('/reseller', 'SettingsController@saveReseller', ['AuthMiddleware']);
     Router::post('/packages/store', 'SettingsController@storePackage', ['AuthMiddleware']);
     Router::post('/packages/update', 'SettingsController@updatePackage', ['AuthMiddleware']);
@@ -363,6 +490,68 @@ Router::prefix('/settings', function() {
     Router::post('/profiles/update', 'SettingsController@updateProfile', ['AuthMiddleware']);
     Router::post('/profiles/delete/{id}', 'SettingsController@deleteProfile', ['AuthMiddleware']);
     Router::get('/{type}', 'SettingsController@configPage', ['AuthMiddleware']);
+});
+
+// ── Super Admin Panel ─────────────────────────────────────────────
+Router::get('/superadmin/login', 'SuperAdminController@showLogin');
+Router::post('/superadmin/login', 'SuperAdminController@login');
+Router::get('/superadmin/logout', 'SuperAdminController@logout');
+
+Router::prefix('/superadmin', function() {
+    Router::get('', 'SuperAdminDashboardController@index', ['SuperAdminMiddleware']);
+    Router::get('/dashboard', 'SuperAdminDashboardController@index', ['SuperAdminMiddleware']);
+    Router::get('/api/live-stats', 'SuperAdminDashboardController@liveStats', ['SuperAdminMiddleware']);
+
+    // Users management
+    Router::get('/users', 'SuperAdminController@users', ['SuperAdminMiddleware']);
+    Router::post('/users/store', 'SuperAdminController@storeUser', ['SuperAdminMiddleware']);
+    Router::post('/users/update/{id}', 'SuperAdminController@updateUser', ['SuperAdminMiddleware']);
+    Router::post('/users/delete/{id}', 'SuperAdminController@deleteUser', ['SuperAdminMiddleware']);
+    Router::post('/users/toggle/{id}', 'SuperAdminController@toggleUser', ['SuperAdminMiddleware']);
+    Router::post('/users/reset-password/{id}', 'SuperAdminController@resetPassword', ['SuperAdminMiddleware']);
+
+    // Activity logs
+    Router::get('/logs', 'SuperAdminController@logs', ['SuperAdminMiddleware']);
+    Router::post('/logs/clear', 'SuperAdminController@clearLogs', ['SuperAdminMiddleware']);
+
+    // System settings
+    Router::get('/settings', 'SuperAdminController@settings', ['SuperAdminMiddleware']);
+    Router::post('/settings/save', 'SuperAdminController@saveSettings', ['SuperAdminMiddleware']);
+
+    // Branches overview
+    Router::get('/branches', 'SuperAdminController@branches', ['SuperAdminMiddleware']);
+
+    // System health / NOC
+    Router::get('/noc', 'SuperAdminController@noc', ['SuperAdminMiddleware']);
+});
+
+// ── OTT Subscription Management ──────────────────────────────────
+Router::prefix('/ott', function() {
+    Router::get('', 'OttController@index', ['AuthMiddleware']);
+    // Providers
+    Router::get('/providers', 'OttController@providers', ['AuthMiddleware']);
+    Router::get('/providers/create', 'OttController@createProvider', ['AuthMiddleware']);
+    Router::post('/providers/store', 'OttController@storeProvider', ['AuthMiddleware']);
+    Router::get('/providers/edit/{id}', 'OttController@editProvider', ['AuthMiddleware']);
+    Router::post('/providers/update/{id}', 'OttController@updateProvider', ['AuthMiddleware']);
+    Router::post('/providers/toggle/{id}', 'OttController@toggleProvider', ['AuthMiddleware']);
+    // Packages
+    Router::get('/packages', 'OttController@packages', ['AuthMiddleware']);
+    Router::get('/packages/create', 'OttController@createPackage', ['AuthMiddleware']);
+    Router::post('/packages/store', 'OttController@storePackage', ['AuthMiddleware']);
+    Router::get('/packages/edit/{id}', 'OttController@editPackage', ['AuthMiddleware']);
+    Router::post('/packages/update/{id}', 'OttController@updatePackage', ['AuthMiddleware']);
+    Router::post('/packages/delete/{id}', 'OttController@deletePackage', ['AuthMiddleware']);
+    // Subscriptions
+    Router::get('/subscriptions', 'OttController@subscriptions', ['AuthMiddleware']);
+    Router::get('/subscriptions/create', 'OttController@createSubscription', ['AuthMiddleware']);
+    Router::post('/subscriptions/store', 'OttController@storeSubscription', ['AuthMiddleware']);
+    Router::get('/subscriptions/view/{id}', 'OttController@viewSubscription', ['AuthMiddleware']);
+    Router::post('/subscriptions/activate/{id}', 'OttController@activateSubscription', ['AuthMiddleware']);
+    Router::post('/subscriptions/deactivate/{id}', 'OttController@deactivateSubscription', ['AuthMiddleware']);
+    Router::post('/subscriptions/renew/{id}', 'OttController@renewSubscription', ['AuthMiddleware']);
+    // Bulk renewal (admin / cron trigger)
+    Router::post('/process-renewals', 'OttController@processRenewals', ['AuthMiddleware']);
 });
 
 // Dispatch

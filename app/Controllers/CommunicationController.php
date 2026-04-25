@@ -18,7 +18,7 @@ class CommunicationController {
     public function index(): void {
         $pageTitle  = 'Communication Hub';
         $currentPage = 'comms';
-        $currentSubPage = 'dashboard';
+        $currentSubPage = 'comms-dashboard';
 
         $stats = [
             'total_sent'   => $this->db->fetchOne("SELECT COUNT(*) c FROM sms_logs WHERE status='sent'")['c'] ?? 0,
@@ -153,7 +153,7 @@ class CommunicationController {
     public function logs(): void {
         $pageTitle  = 'SMS Logs';
         $currentPage = 'comms';
-        $currentSubPage = 'logs';
+        $currentSubPage = 'comms-logs';
 
         $page    = max(1, (int)($_GET['page'] ?? 1));
         $perPage = 50;

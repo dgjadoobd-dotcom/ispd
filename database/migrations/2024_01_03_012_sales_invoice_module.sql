@@ -1,0 +1,8 @@
+-- ============================================================
+-- Migration: 2024_01_03_012_sales_invoice_module
+-- Description: Sales & Service Invoicing module (reference only - tables already exist)
+-- Requirements: 5.1-5.7
+-- ============================================================
+-- Note: sales_invoices, sales_invoice_items, sales_payments tables
+-- already exist in 2024_01_03_001_create_all_new_modules_tables.sql
+-- This migration serves as documentation for the module implementation

@@ -75,7 +75,7 @@ class SupportController
 
         $pageTitle      = 'New Support Ticket';
         $currentPage    = 'support';
-        $currentSubPage = 'tickets';
+        $currentSubPage = 'ticket-create';
         $viewFile       = BASE_PATH . '/views/support/ticket_form.php';
         require_once BASE_PATH . '/views/layouts/main.php';
     }
@@ -354,7 +354,7 @@ class SupportController
 
         $pageTitle      = 'SLA Compliance Dashboard';
         $currentPage    = 'support';
-        $currentSubPage = 'dashboard';
+        $currentSubPage = 'support-dashboard';
         $viewFile       = BASE_PATH . '/views/support/dashboard.php';
         require_once BASE_PATH . '/views/layouts/main.php';
     }

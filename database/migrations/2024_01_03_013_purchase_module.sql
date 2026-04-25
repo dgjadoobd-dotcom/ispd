@@ -1,0 +1,8 @@
+-- ============================================================
+-- Migration: 2024_01_03_013_purchase_module
+-- Description: Purchase Management module (reference only - tables already exist)
+-- Requirements: 6.1-6.8
+-- ============================================================
+-- Note: vendors, purchase_requisitions, purchase_bills, vendor_payments
+-- already exist in 2024_01_03_001_create_all_new_modules_tables.sql
+-- This migration serves as documentation for the module implementation

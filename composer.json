@@ -1,6 +1,6 @@
 {
-    "name": "digital-isp/radius-service",
-    "description": "RADIUS Service Enhancement for Digital ISP ERP System",
+    "name": "digital-isp/erp",
+    "description": "Enterprise-grade ISP Management System for Bangladesh ISPs",
     "type": "project",
     "license": "proprietary",
     "require": {

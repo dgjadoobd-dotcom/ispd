@@ -1,0 +1,8 @@
+-- ============================================================
+-- Migration: 2024_01_03_014_bandwidth_module
+-- Description: Bandwidth Purchase & Sales module (reference - tables may exist)
+-- Requirements: 11.1-11.8
+-- ============================================================
+-- Note: bandwidth_providers, bandwidth_resellers, bandwidth_purchases, bandwidth_invoices, reseller_ledgers
+-- may exist in earlier migrations
+-- This migration serves as documentation for implementation
