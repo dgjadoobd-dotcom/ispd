@@ -9,7 +9,7 @@
 ## Before You Begin
 
 Make sure you have:
-- Admin credentials for the Digital ISP ERP system
+- Admin credentials for the FCNCHBD ISP ERP system
 - Access to the RADIUS module (ask your system administrator if you don't see it in the menu)
 - A text editor for the CSV exercises
 
@@ -47,7 +47,7 @@ At the top of the dashboard you'll see four cards:
 
 ### Exercise 1.1: Log In and Identify the Active Session Count
 
-1. Log in to the Digital ISP ERP system with your admin credentials.
+1. Log in to the FCNCHBD ISP ERP system with your admin credentials.
 2. Click **RADIUS** in the main navigation menu.
 3. Click **Dashboard**.
 4. Look at the **Active Sessions** card in the top row.

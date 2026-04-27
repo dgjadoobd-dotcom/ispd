@@ -157,7 +157,7 @@ class AiService {
      */
     public function suggestSupportResponse(string $subject, string $description, array $history = []): ?string {
         $messages = [
-            ['role' => 'system', 'content' => "You are a helpful ISP support assistant for 'Digital ISP ERP'. 
+            ['role' => 'system', 'content' => "You are a helpful ISP support assistant for 'FCNCHBD ISP ERP'. 
             Your goal is to provide polite, professional, and technical support responses to customer queries in Bangladesh.
             Keep responses concise and helpful. If it's a technical issue, suggest basic troubleshooting steps like restarting the router."],
             ['role' => 'user', 'content' => "Subject: $subject\nDescription: $description"]

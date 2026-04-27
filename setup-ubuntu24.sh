@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Digital ISP ERP — Ubuntu 24.04 Server Provisioning Script
+# FCNCHBD ISP ERP — Ubuntu 24.04 Server Provisioning Script
 # =============================================================================
 # One-time setup script for a fresh Ubuntu 24.04 LTS (Noble Numbat) server.
 # Run this ONCE before deploying with deploy-prod.sh.
@@ -45,7 +45,7 @@ APP_ROOT="${SCRIPT_DIR}"
 
 echo ""
 echo -e "${BLUE}╔══════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║  Digital ISP ERP — Ubuntu 24.04 Provisioner  ║${NC}"
+echo -e "${BLUE}║  FCNCHBD ISP ERP — Ubuntu 24.04 Provisioner  ║${NC}"
 echo -e "${BLUE}╚══════════════════════════════════════════════╝${NC}"
 echo ""
 echo "  Application root : ${APP_ROOT}"
@@ -130,7 +130,7 @@ SERVICE_FILE="/etc/systemd/system/digital-isp-agent.service"
 echo "  Writing ${SERVICE_FILE}..."
 cat > "${SERVICE_FILE}" <<'SYSTEMD_UNIT'
 [Unit]
-Description=Digital ISP Agent
+Description=FCNCHBD ISP Agent
 After=network.target
 
 [Service]

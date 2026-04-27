@@ -1,7 +1,7 @@
 # Requirements Document: RADIUS Service Enhancement
 
 ## Introduction
-This document outlines the requirements for enhancing the existing RADIUS service in the Digital ISP ERP system. The current RADIUS service provides basic authentication, authorization, and accounting (AAA) functionality but requires enhancements for better scalability, monitoring, and integration capabilities.
+This document outlines the requirements for enhancing the existing RADIUS service in the FCNCHBD ISP ERP system. The current RADIUS service provides basic authentication, authorization, and accounting (AAA) functionality but requires enhancements for better scalability, monitoring, and integration capabilities.
 
 ## Glossary
 

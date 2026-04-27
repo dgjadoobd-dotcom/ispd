@@ -1,9 +1,19 @@
 # Changelog
 
-All notable changes to Digital ISP ERP will be documented in this file.
+All notable changes to FCNCHBD ISP ERP will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v3.0.0.html).
+
+---
+
+## [3.0.0] - 2026-04-26
+
+### Added
+- **Rebranding** - Application rebranded to **FCNCHBD ISP ERP**.
+- **License Update** - License transitioned to **Apache License 2.0**.
+- **Version Upgrade** - Platform upgraded to version 3.0.0.
+- **Global Cleanup** - Updated all system headers, footers, and logs to reflect the new identity.
 
 ---
 

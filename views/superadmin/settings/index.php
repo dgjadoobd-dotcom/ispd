@@ -21,7 +21,7 @@ $get = fn($k, $d = '') => htmlspecialchars($config[$k] ?? $d);
         <div style="display:flex;flex-direction:column;gap:14px;">
             <div>
                 <label class="form-label">Application Name</label>
-                <input type="text" name="app_name" class="form-input" value="<?= $get('app_name', 'Digital ISP ERP') ?>">
+                <input type="text" name="app_name" class="form-input" value="<?= $get('app_name', 'FCNCHBD ISP ERP') ?>">
             </div>
             <div>
                 <label class="form-label">Application URL</label>

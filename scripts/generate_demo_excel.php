@@ -1,6 +1,6 @@
 <?php
 /**
- * Digital ISP ERP — Demo Excel File Generator
+ * FCNCHBD ISP ERP — Demo Excel File Generator
  *
  * Generates sample import/export Excel (.xlsx) files for:
  *   1. customers_import_template.xlsx  — import template with demo rows
@@ -228,7 +228,7 @@ $xlsx1->addSheet('Customer Import');
 $xlsx1->setColWidths([8, 14, 22, 16, 18, 16, 16, 14, 14, 14, 14, 14, 14, 20, 12]);
 
 // Title row
-$xlsx1->addRow(['Digital ISP ERP — Customer Import Template', '', '', '', '', '', '', '', '', '', '', '', '', '', ''], array_fill(0, 15, 5));
+$xlsx1->addRow(['FCNCHBD ISP ERP — Customer Import Template', '', '', '', '', '', '', '', '', '', '', '', '', '', ''], array_fill(0, 15, 5));
 
 // Header row (style 1 = bold white on dark blue)
 $headers = [
@@ -261,7 +261,7 @@ foreach ($demoCustomers as $i => $row) {
 $xlsx1->addSheet('Field Reference');
 $xlsx1->setColWidths([20, 12, 12, 35, 25]);
 
-$xlsx1->addRow(['Digital ISP ERP — Import Field Reference', '', '', '', ''], array_fill(0, 5, 5));
+$xlsx1->addRow(['FCNCHBD ISP ERP — Import Field Reference', '', '', '', ''], array_fill(0, 5, 5));
 $xlsx1->addRow(['Column Name', 'Required', 'Type', 'Description', 'Example'], array_fill(0, 5, 1));
 
 $fields = [
@@ -290,7 +290,7 @@ foreach ($fields as $i => $row) {
 // Sheet 3: Rules
 $xlsx1->addSheet('Import Rules');
 $xlsx1->setColWidths([60]);
-$xlsx1->addRow(['Digital ISP ERP — Import Rules & Notes'], [5]);
+$xlsx1->addRow(['FCNCHBD ISP ERP — Import Rules & Notes'], [5]);
 $xlsx1->addRow([''], [0]);
 $rules = [
     '1.  Columns marked * are REQUIRED. Rows missing these will be skipped.',
@@ -319,7 +319,7 @@ $xlsx2 = new SimpleXlsx();
 $xlsx2->addSheet('Customer Export');
 $xlsx2->setColWidths([6, 12, 22, 16, 18, 16, 30, 12, 12, 20]);
 
-$xlsx2->addRow(['Digital ISP ERP — Customer Export Sample', '', '', '', '', '', '', '', '', ''], array_fill(0, 10, 5));
+$xlsx2->addRow(['FCNCHBD ISP ERP — Customer Export Sample', '', '', '', '', '', '', '', '', ''], array_fill(0, 10, 5));
 
 // Export headers (exact match to exportCsv() in CustomerController)
 $exportHeaders = ['ID', 'Code', 'Full Name', 'Phone', 'Package', 'Zone', 'Address', 'Status', 'Due', 'Created At'];

@@ -1,4 +1,4 @@
-# Digital ISP ERP — Installation Guide
+# FCNCHBD ISP ERP — Installation Guide
 
 ## Table of Contents
 1. [Requirements](#requirements)
@@ -350,4 +350,4 @@ sudo bash -c 'source /var/www/digital-isp/scripts/deploy-helpers.sh && install_c
 
 ---
 
-*Digital ISP ERP — Made for Bangladesh ISPs*
+*FCNCHBD ISP ERP — Made for Bangladesh ISPs*

@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo  Digital ISP Agent - Setup
+echo  FCNCHBD ISP Agent - Setup
 echo ============================================
 echo.
 

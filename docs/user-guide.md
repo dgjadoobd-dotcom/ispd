@@ -7,7 +7,7 @@
 
 ## 1. Overview
 
-The RADIUS Service Enhancement extends the Digital ISP ERP system with a full suite of tools for managing subscriber authentication, monitoring live network sessions, analysing usage trends, and responding to network events.
+The RADIUS Service Enhancement extends the FCNCHBD ISP ERP system with a full suite of tools for managing subscriber authentication, monitoring live network sessions, analysing usage trends, and responding to network events.
 
 ### Key features
 

@@ -28,7 +28,7 @@ if (file_exists($envFile)) {
     }
 }
 
-define('APP_NAME', $envData['APP_NAME'] ?? 'Digital ISP ERP');
+define('APP_NAME', $envData['APP_NAME'] ?? 'FCNCHBD ISP ERP');
 define('APP_URL', $envData['APP_URL'] ?? 'http://localhost');
 define('APP_TIMEZONE', $envData['APP_TIMEZONE'] ?? 'Asia/Dhaka');
 define('APP_DEBUG', ($envData['APP_DEBUG'] ?? 'true') === 'true');
@@ -52,6 +52,7 @@ spl_autoload_register(function ($class) {
     $paths = [
         BASE_PATH . '/app/Controllers/',
         BASE_PATH . '/app/Controllers/CustomerPortal/',
+        BASE_PATH . '/app/Controllers/SuperAdmin/',
         BASE_PATH . '/app/Models/',
         BASE_PATH . '/app/Middleware/',
         BASE_PATH . '/app/Services/',

@@ -8,7 +8,7 @@ namespace Faker\Extension;
 interface VersionExtension extends Extension
 {
     /**
-     * Get a version number in semantic versioning syntax 2.0.0. (https://semver.org/spec/v2.0.0.html)
+     * Get a version number in semantic versioning syntax 2.0.0. (https://semver.org/spec/v3.0.0.html)
      *
      * @param bool $preRelease Pre release parts may be randomly included
      * @param bool $build      Build parts may be randomly included

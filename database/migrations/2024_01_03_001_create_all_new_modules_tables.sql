@@ -1,8 +1,8 @@
-﻿-- ============================================================
+-- ============================================================
 -- Migration: 2024_01_03_001_create_all_new_modules_tables
 -- Date: 2024-01-03
 -- Description: Creates all new tables for 20 missing modules
---              across all phases of the Digital ISP ERP system.
+--              across all phases of the FCNCHBD ISP ERP system.
 --              Phase 2: HR/Support/Tasks
 --              Phase 3: Sales/Purchase/Inventory
 --              Phase 4: Network/Accounts/Assets
@@ -1073,7 +1073,7 @@ INSERT IGNORE INTO configuration_settings (setting_key, setting_value, setting_t
 ('currency_symbol', 'BDT', 'string', 'Default currency symbol', 'general'),
 ('date_format', 'd/m/Y', 'string', 'Default date format', 'general'),
 ('timezone', 'Asia/Dhaka', 'string', 'System timezone', 'general'),
-('company_name', 'Digital ISP', 'string', 'Company name', 'general'),
+('company_name', 'FCNCHBD ISP', 'string', 'Company name', 'general'),
 ('invoice_prefix', 'INV-', 'string', 'Invoice number prefix', 'billing'),
 ('receipt_prefix', 'RCP-', 'string', 'Receipt number prefix', 'billing'),
 ('sales_invoice_prefix', 'SI-', 'string', 'Sales invoice number prefix', 'sales'),

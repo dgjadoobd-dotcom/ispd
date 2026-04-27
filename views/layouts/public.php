@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($pageTitle ?? 'Digital ISP ERP') ?></title>
+    <title><?= htmlspecialchars($pageTitle ?? 'FCNCHBD ISP ERP') ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
@@ -49,7 +49,7 @@
 <header class="pub-header">
     <div class="logo"><i class="fa-solid fa-network-wired" style="color:#fff;font-size:16px;"></i></div>
     <div>
-        <div class="brand"><?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'Digital ISP ERP' ?></div>
+        <div class="brand"><?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'FCNCHBD ISP ERP' ?></div>
         <div class="tagline">Internet Service Provider</div>
     </div>
 </header>
@@ -59,7 +59,7 @@
 </main>
 
 <footer class="pub-footer">
-    &copy; <?= date('Y') ?> <?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'Digital ISP ERP' ?>. All rights reserved.
+    &copy; <?= date('Y') ?> <?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'FCNCHBD ISP ERP' ?>. All rights reserved.
 </footer>
 </body>
 </html>

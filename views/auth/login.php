@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DIGITAL ISP ERP — Login</title>
+    <title>FCNCHBD ISP ERP — Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -61,7 +61,7 @@
                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6);">
                     <i class="fa-solid fa-network-wired text-white text-2xl"></i>
                 </div>
-                <h1 class="text-3xl font-bold gradient-text">DIGITAL ISP ERP</h1>
+                <h1 class="text-3xl font-bold gradient-text">FCNCHBD ISP ERP</h1>
                 <p class="text-gray-400 text-sm mt-1">Bangladesh ISP Management System</p>
             </div>
 
@@ -119,7 +119,7 @@
 
             <!-- Footer info -->
             <div class="text-center mt-6 space-y-1">
-                <p class="text-gray-600 text-xs">DIGITAL ISP ERP v2.0.0 &mdash; Made for Bangladesh ISPs</p>
+                <p class="text-gray-600 text-xs">FCNCHBD ISP ERP v3.0.0 &mdash; Made for Bangladesh ISPs</p>
                 <div class="flex items-center justify-center gap-4 text-xs text-gray-700">
                     <span><i class="fa-solid fa-shield-halved mr-1"></i>Secure</span>
                     <span><i class="fa-solid fa-bolt mr-1"></i>Fast</span>

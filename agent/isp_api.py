@@ -1,5 +1,5 @@
 # ============================================================
-# ISP API Client — talks to your Digital ISP ERP REST API
+# ISP API Client — talks to your FCNCHBD ISP ERP REST API
 # ============================================================
 import requests
 import json

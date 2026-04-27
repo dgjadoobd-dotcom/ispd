@@ -2,7 +2,7 @@
 
 ## Overview
 
-This implementation plan follows the 6-phase roadmap outlined in the design document to implement 20 missing modules for the Digital ISP ERP system. The system is a PHP 8+ MVC application with custom router, SQLite/MySQL database, Tailwind CSS views, and existing Database class. Implementation will be incremental, building on existing infrastructure and following the layered architecture pattern.
+This implementation plan follows the 6-phase roadmap outlined in the design document to implement 20 missing modules for the FCNCHBD ISP ERP system. The system is a PHP 8+ MVC application with custom router, SQLite/MySQL database, Tailwind CSS views, and existing Database class. Implementation will be incremental, building on existing infrastructure and following the layered architecture pattern.
 
 ## Tasks
 

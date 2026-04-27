@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# Digital ISP ERP — Production Deploy Script
+# FCNCHBD ISP ERP — Production Deploy Script
 # Usage: bash deploy-prod.sh
 # Requires: .env.production configured with real credentials
 # WARNING: This deploys to LIVE production. Double-check before running.
@@ -21,7 +21,7 @@ NC='\033[0m'
 
 header() { echo -e "\n${BLUE}══════════════════════════════════════${NC}"; echo -e "${BLUE}  $1${NC}"; echo -e "${BLUE}══════════════════════════════════════${NC}"; }
 
-header "Digital ISP ERP — PRODUCTION Deploy"
+header "FCNCHBD ISP ERP — PRODUCTION Deploy"
 
 # ── OS Detection ──────────────────────────────────────────────
 if [ -f /etc/os-release ]; then

@@ -1,5 +1,5 @@
 -- ============================================================
--- Digital ISP ERP — Customer Portal Database Schema
+-- FCNCHBD ISP ERP — Customer Portal Database Schema
 -- Adds portal tables and extends customers table
 -- ============================================================
 

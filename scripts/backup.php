@@ -1,6 +1,6 @@
 <?php
 /**
- * Digital ISP ERP — Auto Backup Script
+ * FCNCHBD ISP ERP — Auto Backup Script
  *
  * Backs up:
  *   - SQLite database file

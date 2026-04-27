@@ -82,7 +82,7 @@
                 <div style="font-size:15px;font-weight:700;margin-bottom:18px;"><i class="fa-solid fa-gear" style="color:var(--blue);margin-right:8px;"></i>General Settings</div>
                 <form method="POST" action="<?= base_url('settings/general') ?>" style="display:grid;gap:14px;">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                        <div><label class="form-label">Company Name</label><input type="text" name="company_name" class="form-input" value="<?= htmlspecialchars($settings['company_name']??'Digital ISP ERP') ?>"></div>
+                        <div><label class="form-label">Company Name</label><input type="text" name="company_name" class="form-input" value="<?= htmlspecialchars($settings['company_name']??'FCNCHBD ISP ERP') ?>"></div>
                         <div><label class="form-label">Company Phone</label><input type="tel" name="company_phone" class="form-input" value="<?= htmlspecialchars($settings['company_phone']??'') ?>"></div>
                         <div><label class="form-label">Company Email</label><input type="email" name="company_email" class="form-input" value="<?= htmlspecialchars($settings['company_email']??'') ?>"></div>
                         <div><label class="form-label">Website</label><input type="text" name="website" class="form-input" value="<?= htmlspecialchars($settings['website']??'') ?>"></div>

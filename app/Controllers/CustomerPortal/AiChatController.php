@@ -137,7 +137,7 @@ class AiChatController
         require_once BASE_PATH . '/app/Services/AiService.php';
         $ai = new AiService();
 
-        $systemPrompt = "You are a helpful ISP customer support assistant for Digital ISP. "
+        $systemPrompt = "You are a helpful ISP customer support assistant for FCNCHBD ISP. "
             . "You are talking to customer: {$c['full_name']} (ID: {$c['customer_code']}). "
             . "Their package: {$c['package_name']}, speed: {$c['speed_download']}/{$c['speed_upload']}, "
             . "status: {$c['status']}, due amount: ৳{$c['due_amount']}. "

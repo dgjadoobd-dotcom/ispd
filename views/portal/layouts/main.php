@@ -189,7 +189,7 @@ $dueAmount = $customer['due_amount'] ?? 0;
                         </div>
                         <span class="font-medium">Logout</span>
                     </a>
-                    <p class="text-center text-xs text-dark-500 mt-3">v2.0 • Digital ISP ERP</p>
+                    <p class="text-center text-xs text-dark-500 mt-3">v3.0.0 • FCNCHBD ISP ERP</p>
                 </div>
             </div>
         </aside>

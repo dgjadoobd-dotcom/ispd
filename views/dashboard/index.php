@@ -127,6 +127,29 @@
     </div>
 </div>
 
+<!-- Real-time Activity Feed -->
+<div class="card" style="margin-bottom:24px; display:none;" id="activityFeedCard">
+    <div style="padding:12px 16px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:8px;">
+            <div style="width:32px; height:32px; border-radius:6px; background:linear-gradient(135deg,var(--blue),#3b82f6); display:flex; align-items:center; justify-content:center;">
+                <i class="fa-solid fa-bolt" style="color:#fff; font-size:14px;"></i>
+            </div>
+            <div>
+                <div style="font-weight:700; font-size:14px;">Real-time System Activity</div>
+                <div style="font-size:11px; color:var(--text2);">Live events from across the system</div>
+            </div>
+        </div>
+        <div style="font-size:10px; color:var(--green); font-weight:700; display:flex; align-items:center; gap:4px;">
+            <span class="status-dot dot-online" style="width:8px; height:8px;"></span> LIVE
+        </div>
+    </div>
+    <div id="activityFeedList" style="max-height:320px; overflow-y:auto; padding:8px 0;">
+        <div id="noActivityPlaceholder" style="padding:40px; text-align:center; color:var(--text2); font-size:13px;">
+            <i class="fa-solid fa-satellite-dish" style="font-size:24px; margin-bottom:8px; display:block; opacity:0.5;"></i>
+            Waiting for live events...
+        </div>
+    </div>
+</div>
 <div class="device-grid fade-in fade-in-delay-4">
 
     <!-- MikroTik / NAS Servers -->
@@ -281,6 +304,71 @@ async function fetchLiveStats() {
         }
     } catch(e) {}
 }
+
+// Supabase Real-time Activity Feed Logic
+if (typeof supabase !== 'undefined' && supabase !== null) {
+    document.getElementById('activityFeedCard').style.display = 'block';
+    
+    const activityFeedList = document.getElementById('activityFeedList');
+    const placeholder = document.getElementById('noActivityPlaceholder');
+
+    function addActivityItem(icon, color, title, time, meta) {
+        if (placeholder) placeholder.remove();
+        const item = document.createElement('div');
+        item.className = 'activity-item';
+        item.style = 'display:flex; gap:12px; padding:12px 16px; border-bottom:1px solid rgba(0,0,0,0.03); transition:all 0.3s ease; animation: slideIn 0.4s ease-out;';
+        item.innerHTML = `
+            <div style="width:36px; height:36px; border-radius:10px; background:${color}15; color:${color}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="fa-solid ${icon}"></i>
+            </div>
+            <div style="flex:1; min-width:0;">
+                <div style="display:flex; justify-content:space-between; align-items:start; gap:8px;">
+                    <div style="font-size:13.5px; font-weight:600; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${title}</div>
+                    <div style="font-size:10px; color:var(--text2); white-space:nowrap;">${time}</div>
+                </div>
+                <div style="font-size:12px; color:var(--text2); margin-top:2px;">${meta}</div>
+            </div>
+        `;
+        activityFeedList.prepend(item);
+        if (activityFeedList.children.length > 20) activityFeedList.lastElementChild.remove();
+    }
+
+    // Subscribe to multiple tables
+    const tables = [
+        { name: 'support_tickets', icon: 'fa-ticket', color: '#dc2626', label: 'Support Ticket' },
+        { name: 'payments', icon: 'fa-money-bill-trend-up', color: '#16a34a', label: 'Payment' },
+        { name: 'customers', icon: 'fa-user-plus', color: '#2563eb', label: 'New Customer' },
+        { name: 'activity_logs', icon: 'fa-clock-rotate-left', color: '#7c3aed', label: 'Staff Action' }
+    ];
+
+    tables.forEach(table => {
+        supabase
+            .channel(`dashboard:${table.name}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: table.name }, payload => {
+                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                let title = table.label;
+                let meta = 'A new record was added.';
+
+                if (table.name === 'support_tickets') {
+                    title = `Ticket #${payload.new.id}: ${payload.new.subject}`;
+                    meta = `Priority: ${payload.new.priority} | Customer ID: ${payload.new.customer_id}`;
+                } else if (table.name === 'payments') {
+                    title = `Payment: ${payload.new.amount} BDT`;
+                    meta = `Receipt: ${payload.new.receipt_number} | Method: ${payload.new.payment_method}`;
+                } else if (table.name === 'customers') {
+                    title = `Customer Joined: ${payload.new.full_name}`;
+                    meta = `Code: ${payload.new.customer_code} | Zone: ${payload.new.sub_zone || 'N/A'}`;
+                } else if (table.name === 'activity_logs') {
+                    title = `Action: ${payload.new.action}`;
+                    meta = `Module: ${payload.new.module} | IP: ${payload.new.ip_address}`;
+                }
+
+                addActivityItem(table.icon, table.color, title, now, meta);
+            })
+            .subscribe();
+    });
+}
+
 fetchLiveStats();
 setInterval(fetchLiveStats, 30000);
 </script>

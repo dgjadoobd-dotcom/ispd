@@ -2,7 +2,7 @@
 
 ## Overview
 
-This design document outlines the implementation of 20 missing modules for the Digital ISP ERP system — a PHP 8+ MVC application with custom router, SQLite/MySQL database, Tailwind CSS views, and existing Database class. The system already has Customer Management, Billing, MikroTik/RADIUS integration, Customer Portal, SMS, Automation, Payment Gateway, Dashboard, OLT/ONU, Webhooks, AI, MFA, IP Access Control, Rate Limiting, Audit Logging, and Bulk Operations.
+This design document outlines the implementation of 20 missing modules for the FCNCHBD ISP ERP system — a PHP 8+ MVC application with custom router, SQLite/MySQL database, Tailwind CSS views, and existing Database class. The system already has Customer Management, Billing, MikroTik/RADIUS integration, Customer Portal, SMS, Automation, Payment Gateway, Dashboard, OLT/ONU, Webhooks, AI, MFA, IP Access Control, Rate Limiting, Audit Logging, and Bulk Operations.
 
 The 20 modules extend the system to cover branch management, HR, support, tasks, sales, purchasing, inventory, network diagrams, accounting, assets, bandwidth reselling, portals, employee tools, regulatory reporting, OTT, configuration, RBAC UI, bulk communications, and a mobile API.
 
@@ -1235,8 +1235,8 @@ However, these are better served by comprehensive example-based tests covering e
 
 ## Conclusion
 
-This design document provides a comprehensive blueprint for implementing the 20 missing modules in the Digital ISP ERP system. The architecture leverages existing system components while extending functionality to cover branch management, HR, support, tasks, sales, purchasing, inventory, network diagrams, accounting, assets, bandwidth reselling, portals, employee tools, regulatory reporting, OTT, configuration, RBAC UI, bulk communications, and mobile API.
+This design document provides a comprehensive blueprint for implementing the 20 missing modules in the FCNCHBD ISP ERP system. The architecture leverages existing system components while extending functionality to cover branch management, HR, support, tasks, sales, purchasing, inventory, network diagrams, accounting, assets, bandwidth reselling, portals, employee tools, regulatory reporting, OTT, configuration, RBAC UI, bulk communications, and mobile API.
 
 The implementation follows a phased approach with rigorous testing strategies focused on example-based unit tests and integration tests rather than property-based testing, which is not appropriate for this feature set. Error handling, security, performance, and deployment considerations are comprehensively addressed.
 
-The successful implementation of these modules will transform the Digital ISP ERP system into a complete enterprise resource planning solution for internet service providers, enabling efficient management of all business operations from a single integrated platform.
+The successful implementation of these modules will transform the FCNCHBD ISP ERP system into a complete enterprise resource planning solution for internet service providers, enabling efficient management of all business operations from a single integrated platform.

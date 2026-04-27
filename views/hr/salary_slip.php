@@ -29,7 +29,7 @@
         <div style="width:48px;height:48px;border-radius:12px;background:var(--blue);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">
             <i class="fa-solid fa-network-wired" style="color:#fff;font-size:20px;"></i>
         </div>
-        <h2 style="margin:0 0 4px;font-size:22px;font-weight:800;color:var(--text);"><?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'Digital ISP ERP' ?></h2>
+        <h2 style="margin:0 0 4px;font-size:22px;font-weight:800;color:var(--text);"><?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'FCNCHBD ISP ERP' ?></h2>
         <p style="margin:0;font-size:13px;color:var(--text2);">Salary Slip</p>
         <div style="display:inline-block;margin-top:8px;padding:4px 16px;background:rgba(37,99,235,.1);border-radius:20px;font-size:13px;font-weight:700;color:var(--blue);">
             <?= date('F Y', strtotime($slip['salary_month'])) ?>

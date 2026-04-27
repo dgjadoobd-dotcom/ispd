@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the technical design for making the Digital ISP ERP system fully deployable on Ubuntu 24.04 LTS (Noble Numbat). Ubuntu 24.04 ships PHP 8.3 as the default, uses `php8.3-fpm` as the FastCGI process manager, and introduces updated package names, socket paths, and systemd service names compared to Ubuntu 22.04.
+This document describes the technical design for making the FCNCHBD ISP ERP system fully deployable on Ubuntu 24.04 LTS (Noble Numbat). Ubuntu 24.04 ships PHP 8.3 as the default, uses `php8.3-fpm` as the FastCGI process manager, and introduces updated package names, socket paths, and systemd service names compared to Ubuntu 22.04.
 
 The system is a PHP 8.1+ application with MySQL/SQLite databases, FreeRADIUS integration, a Python agent component, Nginx web server, Docker Compose-based deployment, and multiple cron jobs. All twelve requirement areas must be addressed to achieve a zero-manual-intervention deployment on a fresh Ubuntu 24.04 server.
 
@@ -244,7 +244,7 @@ The systemd unit file at `/etc/systemd/system/digital-isp-agent.service`:
 
 ```ini
 [Unit]
-Description=Digital ISP Agent
+Description=FCNCHBD ISP Agent
 After=network.target
 
 [Service]

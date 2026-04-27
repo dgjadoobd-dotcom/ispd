@@ -6,9 +6,10 @@
 <img src="https://img.shields.io/badge/MikroTik-RouterOS-FF6600?style=for-the-badge&logo=mikrotik&logoColor=white" />
 <img src="https://img.shields.io/badge/PHPUnit-10-6C3483?style=for-the-badge&logo=php&logoColor=white" />
 <img src="https://img.shields.io/badge/Ubuntu-24.04_LTS-E95420?style=for-the-badge&logo=ubuntu&logoColor=white" />
-<img src="https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge" />
+<img src="https://img.shields.io/badge/Version-3.0.0-blue?style=for-the-badge" />
+<img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" />
 
-# 🌐 Digital ISP ERP
+# 🌐 FCNCHBD ISP ERP v3.0.0
 
 **Enterprise-grade ISP Management System built for Bangladesh ISPs**
 
@@ -73,16 +74,16 @@ Manage customers, billing, GPON/fiber networks, MikroTik routers, RADIUS AAA, HR
 | 20 | **REST API** | Bearer token, full CRUD, JWT, push notifications | ✅ |
 | 21 | **Automation** | Cron-based billing, suspension, reconnection, alerts | ✅ |
 | 22 | **Docker** | Nginx + PHP-FPM + MySQL + Redis stack | ✅ |
-| 23 | **Branch Management** | Multi-branch isolation, per-branch credentials, reports | 🔄 |
-| 24 | **Sales & Invoicing** | Installation fees, product/service invoices, partial payments | 🔄 |
-| 25 | **Purchase Management** | Vendors, requisitions, bills, vendor ledger | 🔄 |
+| 23 | **Branch Management** | Multi-branch isolation, per-branch credentials, reports | ✅ |
+| 24 | **Sales & Invoicing** | Installation fees, product/service invoices, partial payments | ✅ |
+| 25 | **Purchase Management** | Vendors, requisitions, bills, vendor ledger | ✅ |
 | 26 | **Network Diagram** | Leaflet.js map, POP/BOX nodes, topology visualization | 🔄 |
 | 27 | **Accounts Management** | Expenses, income, bank accounts, P&L, balance sheet | 🔄 |
 | 28 | **Asset Management** | Asset register, disposal, depreciation, warranty alerts | 🔄 |
-| 29 | **Bandwidth Management** | Provider/reseller management, invoices, utilization | 🔄 |
-| 30 | **BTRC Reports** | Regulatory DIS report generation, CSV/PDF export | 🔄 |
-| 31 | **OTT Subscriptions** | Bundle management, auto-renewal, subscriber dashboard | 🔄 |
-| 32 | **Bulk SMS & Email** | Campaign manager, recipient filtering, scheduled sends | 🔄 |
+| 29 | **Bandwidth Management** | Provider/reseller management, invoices, utilization | ✅ |
+| 30 | **BTRC Reports** | Regulatory DIS report generation, CSV/PDF export | ✅ |
+| 31 | **OTT Subscriptions** | Bundle management, auto-renewal, subscriber dashboard | ✅ |
+| 32 | **Bulk SMS & Email** | Campaign manager, recipient filtering, scheduled sends | ✅ |
 
 > ✅ Complete · 🔄 In Progress
 
@@ -569,14 +570,13 @@ Please follow [Conventional Commits](https://www.conventionalcommits.org/) for c
 
 ## 📄 License
 
-This project is **proprietary software**. All rights reserved.  
-Unauthorized copying, distribution, or modification is prohibited.
+This project is licensed under the **Apache License 2.0**. See the [LICENSE](LICENSE) file for details.
 
 ---
 
 ## 👨‍💻 Author
 
-**Digital ISP ERP Team**  
+**FCNCHBD ISP ERP Team**  
 📧 admin@bkdnet.xyz  
 🌐 [github.com/dgjadoobd-dotcom/ispd](https://github.com/dgjadoobd-dotcom/ispd)
 

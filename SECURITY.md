@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within Digital ISP ERP, please send an email to **security@digitalisp.xyz**. All security vulnerabilities will be promptly addressed.
+If you discover a security vulnerability within FCNCHBD ISP ERP, please send an email to **security@digitalisp.xyz**. All security vulnerabilities will be promptly addressed.
 
 Please include the following information:
 - Type of vulnerability
@@ -70,4 +70,4 @@ Run `composer audit` to check for known vulnerabilities in dependencies.
 
 ---
 
-*Thank you for helping keep Digital ISP ERP secure!*
+*Thank you for helping keep FCNCHBD ISP ERP secure!*

@@ -1,8 +1,8 @@
 {
     "name": "digital-isp/erp",
     "description": "Enterprise-grade ISP Management System for Bangladesh ISPs",
-    "type": "project",
-    "license": "proprietary",
+    "version": "3.0.0",
+    "license": "Apache-2.0",
     "require": {
         "php": "^8.1",
         "ext-curl": "*",

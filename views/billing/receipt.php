@@ -32,7 +32,7 @@
         <div class="receipt-header">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                 <div>
-                    <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;"><?= htmlspecialchars($payment['branch_name'] ?? 'Digital ISP ERP') ?></div>
+                    <div style="font-size:22px;font-weight:800;letter-spacing:-0.5px;"><?= htmlspecialchars($payment['branch_name'] ?? 'FCNCHBD ISP ERP') ?></div>
                     <div style="font-size:12px;opacity:0.8;margin-top:2px;"><?= htmlspecialchars($payment['branch_address'] ?? 'Bangladesh') ?></div>
                     <div style="font-size:12px;opacity:0.8;"><?= htmlspecialchars($payment['branch_phone'] ?? '') ?></div>
                 </div>
@@ -103,7 +103,7 @@
                 </div>
                 <div style="text-align:center;">
                     <div style="font-size:11px;color:#6b7280;margin-bottom:6px;">Authorized Signatory</div>
-                    <div style="width:120px;border-top:1px solid #111;padding-top:6px;font-size:11px;color:#6b7280;"><?= htmlspecialchars($payment['branch_name'] ?? 'Digital ISP ERP') ?></div>
+                    <div style="width:120px;border-top:1px solid #111;padding-top:6px;font-size:11px;color:#6b7280;"><?= htmlspecialchars($payment['branch_name'] ?? 'FCNCHBD ISP ERP') ?></div>
                 </div>
             </div>
 

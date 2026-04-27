@@ -1,6 +1,6 @@
-# Contributing to Digital ISP ERP
+# Contributing to FCNCHBD ISP ERP
 
-Thank you for your interest in contributing to Digital ISP ERP! This document outlines our contribution guidelines.
+Thank you for your interest in contributing to FCNCHBD ISP ERP! This document outlines our contribution guidelines.
 
 ## Code of Conduct
 

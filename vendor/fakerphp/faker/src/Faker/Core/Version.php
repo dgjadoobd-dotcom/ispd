@@ -25,7 +25,7 @@ final class Version implements Extension\VersionExtension
     }
 
     /**
-     * Represents v2.0.0 of the semantic versioning: https://semver.org/spec/v2.0.0.html
+     * Represents v3.0.0 of the semantic versioning: https://semver.org/spec/v3.0.0.html
      */
     public function semver(bool $preRelease = false, bool $build = false): string
     {

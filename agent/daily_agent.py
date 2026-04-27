@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ============================================================
-# Digital ISP Daily Agent
+# FCNCHBD ISP Daily Agent
 # Runs all automated tasks on schedule
 #
 # Install: pip install requests openpyxl schedule
@@ -195,7 +195,7 @@ def run_now(task_name: str):
 
 # ── Scheduler ─────────────────────────────────────────────────
 def start_scheduler():
-    log("🤖 Digital ISP Daily Agent started")
+    log("🤖 FCNCHBD ISP Daily Agent started")
     log(f"   Morning tasks:  {MORNING_TIME}")
     log(f"   Evening report: {EVENING_TIME}")
     log(f"   Due reminders:  {MORNING_TIME} daily")

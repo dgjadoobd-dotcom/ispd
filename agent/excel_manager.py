@@ -49,7 +49,7 @@ def update_billing_report(customers: list, stats: dict):
     ws_sum.column_dimensions['A'].width = 30
     ws_sum.column_dimensions['B'].width = 20
 
-    ws_sum['A1'] = "Digital ISP ERP — Daily Report"
+    ws_sum['A1'] = "FCNCHBD ISP ERP — Daily Report"
     ws_sum['A1'].font = Font(bold=True, size=16, color=COLOR_HEADER)
     ws_sum.merge_cells('A1:B1')
 

@@ -2,12 +2,12 @@
 
 ## Introduction
 
-This document defines the requirements for making the Digital ISP ERP system fully deployable on Ubuntu 24.04 LTS. Ubuntu 24.04 ships with PHP 8.3 as the default PHP version, uses systemd for service management, and introduces updated package names and paths compared to earlier Ubuntu releases. The project is a PHP-based ISP management system with MySQL/SQLite databases, RADIUS integration, a Python agent component, cron jobs, Nginx/Apache web server support, Docker-based deployment, and multiple environment configurations. All components must be verified and updated to work correctly on Ubuntu 24.04 without manual workarounds.
+This document defines the requirements for making the FCNCHBD ISP ERP system fully deployable on Ubuntu 24.04 LTS. Ubuntu 24.04 ships with PHP 8.3 as the default PHP version, uses systemd for service management, and introduces updated package names and paths compared to earlier Ubuntu releases. The project is a PHP-based ISP management system with MySQL/SQLite databases, RADIUS integration, a Python agent component, cron jobs, Nginx/Apache web server support, Docker-based deployment, and multiple environment configurations. All components must be verified and updated to work correctly on Ubuntu 24.04 without manual workarounds.
 
 ## Glossary
 
 - **Deploy_Script**: The shell scripts `deploy-prod.sh`, `deploy-staging.sh`, and `deploy-dev.sh` used to deploy the application.
-- **System**: The Digital ISP ERP application and all its components.
+- **System**: The FCNCHBD ISP ERP application and all its components.
 - **PHP_FPM**: The PHP FastCGI Process Manager service (`php8.3-fpm`) that processes PHP requests.
 - **Web_Server**: The Nginx or Apache HTTP server that serves the application.
 - **RADIUS_Service**: The FreeRADIUS server and its associated MySQL database used for ISP authentication.

@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" id="htmlRoot">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'Digital ISP ERP' ?> — <?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></title>
+    <title><?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'FCNCHBD ISP ERP' ?> � <?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -58,7 +58,7 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 
-        /* ── SIDEBAR ── */
+        /* -- SIDEBAR -- */
         #sidebar {
             position: fixed; top: 0; left: 0; bottom: 0;
             width: var(--sidebar-w); background: #1a2942;
@@ -121,7 +121,7 @@
         .sub-item.active { background: rgba(37,99,235,0.16); color: #bfdbfe; }
         .sub-item i { width: 12px; font-size: 10px; text-align: center; flex-shrink: 0; }
 
-        /* ── HEADER ── */
+        /* -- HEADER -- */
         #header {
             position: fixed; top: 0; right: 0; left: var(--sidebar-w); height: var(--header-h);
             background: var(--bg2); border-bottom: 1px solid var(--border);
@@ -164,7 +164,7 @@
         .user-info .name { font-size: 13px; font-weight: 600; color: var(--text); }
         .user-info .role { font-size: 11px; color: var(--text2); }
 
-        /* ── MAIN ── */
+        /* -- MAIN -- */
         #main {
             margin-left: var(--sidebar-w); margin-top: var(--header-h);
             min-height: calc(100vh - var(--header-h));
@@ -208,7 +208,7 @@
             max-height: calc(100vh - 20px);
         }
 
-        /* ── CARDS ── */
+        /* -- CARDS -- */
         .card {
             background: var(--bg2); border: 1px solid var(--border);
             border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);
@@ -223,7 +223,7 @@
         .stat-change.up { color: var(--green); }
         .stat-change.down { color: var(--red); }
 
-        /* ── TABLE ── */
+        /* -- TABLE -- */
         .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
         .data-table th {
             text-align: left; padding: 12px 16px; font-size: 12px;
@@ -237,7 +237,7 @@
         .data-table tr:last-child td { border-bottom: none; }
         .data-table tbody tr:hover { background: var(--bg3); }
 
-        /* ── BADGES ── */
+        /* -- BADGES -- */
         .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; }
         .badge-green  { background: linear-gradient(135deg,#dcfce7,#bbf7d0); color: #15803d; }
         .badge-yellow { background: linear-gradient(135deg,#fef3c7,#fcd34d); color: #b45309; }
@@ -246,7 +246,7 @@
         .badge-gray   { background: linear-gradient(135deg,#f1f5f9,#e2e8f0); color: #475569; }
         .badge-purple { background: linear-gradient(135deg,#ede9fe,#ddd6fe); color: #6d28d9; }
 
-        /* ── BUTTONS ── */
+        /* -- BUTTONS -- */
         .btn {
             display: inline-flex; align-items: center; gap: 8px;
             padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600;
@@ -264,12 +264,12 @@
         .btn-sm { padding: 7px 14px; font-size: 13px; }
         .btn-xs { padding: 4px 10px; font-size: 12px; }
 
-        /* ── PAGE HEADER ── */
+        /* -- PAGE HEADER -- */
         .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
         .page-title { font-size: 26px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
         .page-breadcrumb { font-size: 13px; color: var(--text2); margin-top: 4px; display: flex; align-items: center; gap: 8px; }
 
-        /* ── FORMS ── */
+        /* -- FORMS -- */
         .form-input {
             background: var(--bg2); border: 1.5px solid var(--border); color: var(--text);
             border-radius: 8px; padding: 10px 14px; font-size: 14px; width: 100%;
@@ -278,7 +278,7 @@
         .form-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,0.1); }
         .form-label { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; display: block; }
 
-        /* ── TOGGLE SWITCH ── */
+        /* -- TOGGLE SWITCH -- */
         .switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider {
@@ -292,7 +292,7 @@
         .switch input:checked + .slider { background: #2563eb; }
         .switch input:checked + .slider:before { transform: translateX(20px); }
 
-        /* ── DROPDOWN ── */
+        /* -- DROPDOWN -- */
         .dropdown { position: relative; }
         .dropdown-menu {
             position: absolute; right: 0; top: calc(100% + 8px); min-width: 200px;
@@ -307,7 +307,7 @@
         .dropdown-item:hover { background: var(--bg3); color: var(--blue); }
         .dropdown-divider { border-top: 1px solid var(--border); margin: 4px 0; }
 
-        /* ── MODAL ── */
+        /* -- MODAL -- */
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(6px);
             z-index: 500; display: flex; align-items: center; justify-content: center;
@@ -325,11 +325,11 @@
         .modal-body   { padding: 22px; }
         .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
 
-        /* ── MISC ── */
+        /* -- MISC -- */
         .progress-bar  { height: 6px; border-radius: 3px; background: var(--bg3); overflow: hidden; }
         .progress-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
 
-        /* ── SEARCH RESULTS ── */
+        /* -- SEARCH RESULTS -- */
         .search-results-panel {
             position: absolute; top: calc(100% + 6px); left: 0; right: 0;
             background: var(--bg2); border: 1px solid var(--border);
@@ -350,7 +350,7 @@
         .sr-meta  { font-size: 11px; color: var(--text2); }
         .sr-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: auto; }
 
-        /* ── ANIMATIONS ── */
+        /* -- ANIMATIONS -- */
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
         .fade-in { animation: fadeInUp 0.4s ease forwards; }
         .fade-in-delay-1 { animation-delay: 0.05s; opacity: 0; }
@@ -358,7 +358,7 @@
         .fade-in-delay-3 { animation-delay: 0.15s; opacity: 0; }
         .fade-in-delay-4 { animation-delay: 0.20s; opacity: 0; }
 
-        /* ── RESPONSIVE ── */
+        /* -- RESPONSIVE -- */
         @media (max-width: 1200px) {
             #header { padding: 0 14px; }
             #main { padding: 18px; }
@@ -431,7 +431,7 @@
             .header-actions .btn { display: none; }
         }
 
-        /* ── SIDEBAR COLLAPSED (desktop) ── */
+        /* -- SIDEBAR COLLAPSED (desktop) -- */
         @media (min-width: 769px) {
             /* Smooth width transition */
             #sidebar {
@@ -520,16 +520,18 @@
             }
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<!-- ─────────────────── SIDEBAR ─────────────────── -->
+<!-- ------------------- SIDEBAR ------------------- -->
 <nav id="sidebar">
     <div class="sidebar-logo">
         <div class="logo-icon"><i class="fa-solid fa-network-wired"></i></div>
         <div>
-            <div class="logo-text"><?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'Digital ISP ERP' ?></div>
-            <div class="logo-sub">ERP v2.0</div>
+            <div class="logo-text"><?= defined('APP_NAME') ? htmlspecialchars(APP_NAME) : 'FCNCHBD ISP ERP' ?></div>
+            <div class="logo-sub">ERP v3.0.0</div>
         </div>
     </div>
 
@@ -1062,7 +1064,7 @@
 </nav>
 <div id="sidebarBackdrop" onclick="closeSidebarMobile()"></div>
 
-<!-- ─────────────────── HEADER ─────────────────── -->
+<!-- ------------------- HEADER ------------------- -->
 <header id="header">
     <button id="sidebarToggle" class="icon-btn" onclick="toggleSidebar()" title="Toggle sidebar">
         <i class="fa-solid fa-bars"></i>
@@ -1070,8 +1072,8 @@
 
     <div class="header-search">
         <i class="fa-solid fa-magnifying-glass" style="font-size:12px;flex-shrink:0;"></i>
-        <input type="text" placeholder="Search customers, phone, code…" id="globalSearch" autocomplete="off">
-        <span style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border);flex-shrink:0;">⌘K</span>
+        <input type="text" placeholder="Search customers, phone, code�" id="globalSearch" autocomplete="off">
+        <span style="font-size:11px;background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--border);flex-shrink:0;">?K</span>
         <div class="search-results-panel" id="searchPanel"></div>
     </div>
 
@@ -1131,10 +1133,10 @@
     </div>
 </header>
 
-<!-- ─────────────────── MAIN ─────────────────── -->
+<!-- ------------------- MAIN ------------------- -->
 <?php
 // Section nav only for pages with many sub-pages where context panel adds value.
-// All pages use the sidebar submenu for navigation — no section nav panels.
+// All pages use the sidebar submenu for navigation � no section nav panels.
 $sectionMenuData = $sectionMenu ?? null;
 ?>
 <main id="main">
@@ -1142,7 +1144,7 @@ $sectionMenuData = $sectionMenu ?? null;
 </main>
 
 <script>
-// ── THEME ──
+// -- THEME --
 const savedTheme = localStorage.getItem('ispTheme') || 'light';
 document.getElementById('htmlRoot').setAttribute('data-theme', savedTheme);
 document.getElementById('themeIcon').className = savedTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
@@ -1154,7 +1156,7 @@ function toggleTheme() {
     document.getElementById('themeIcon').className = next === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
 }
 
-// ── SIDEBAR ──
+// -- SIDEBAR --
 // Restore collapsed state
 if (localStorage.getItem('sidebarCollapsed') === '1') document.body.classList.add('sidebar-collapsed');
 
@@ -1210,7 +1212,7 @@ window.addEventListener('resize', () => {
     if (window.innerWidth > 768) closeSidebarMobile();
 });
 
-// ── DROPDOWN ──
+// -- DROPDOWN --
 function toggleDropdown(id) {
     document.querySelectorAll('.dropdown-menu').forEach(m => { if (m.id !== id) m.classList.remove('open'); });
     document.getElementById(id).classList.toggle('open');
@@ -1219,7 +1221,7 @@ document.addEventListener('click', e => {
     if (!e.target.closest('.dropdown')) document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
 });
 
-// ── SEARCH ──
+// -- SEARCH --
 let searchTimer, selectedIdx = -1;
 const searchInput = document.getElementById('globalSearch');
 const searchPanel = document.getElementById('searchPanel');
@@ -1250,7 +1252,7 @@ async function globalSearch(q) {
         searchPanel.innerHTML = data.length
             ? data.map(c => `<a href="<?= base_url('customers/view/') ?>${c.id}" class="search-result-item">
                 <div class="sr-icon"><i class="fa-solid fa-user"></i></div>
-                <div class="sr-info"><div class="sr-title">${esc(c.full_name)}</div><div class="sr-meta">${esc(c.customer_code)} · ${esc(c.phone)}</div></div>
+                <div class="sr-info"><div class="sr-title">${esc(c.full_name)}</div><div class="sr-meta">${esc(c.customer_code)} � ${esc(c.phone)}</div></div>
                 <span class="badge badge-${c.status==='active'?'green':'red'}" style="font-size:10px;">${esc(c.status)}</span>
               </a>`).join('')
             : '<div style="padding:16px;text-align:center;font-size:13px;color:var(--text2);">No results found</div>';
@@ -1265,6 +1267,121 @@ document.addEventListener('click', e => { if (!e.target.closest('.header-search'
 document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); searchInput.focus(); }
 });
+</script>
+<script>
+// -- SUPABASE --
+const supabaseEnabled = <?= env('SUPABASE_ENABLED', false) ? 'true' : 'false' ?>;
+let supabase = null;
+
+if (supabaseEnabled) {
+    const supabaseUrl = '<?= env('SUPABASE_URL') ?>';
+    const supabaseKey = '<?= env('SUPABASE_ANON_KEY') ?>';
+    if (supabaseUrl && supabaseKey) {
+        supabase = supabasejs.createClient(supabaseUrl, supabaseKey);
+        console.log('Supabase Realtime Initialized');
+
+        // Example: Real-time listener for Support Tickets
+        supabase
+            .channel('public:support_tickets')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_tickets' }, payload => {
+                console.log('New Ticket Received:', payload.new);
+                showNotification('New Support Ticket', `Ticket #${payload.new.id}: ${payload.new.subject}`);
+                // Refresh notification count if exists
+                updateNotifCount();
+            })
+            .subscribe();
+    }
+}
+
+function showNotification(title, message) {
+    // Basic toast/notification implementation
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-white dark:bg-zinc-900 border-l-4 border-blue-600 shadow-xl p-4 rounded-lg flex items-start gap-4 z-[9999] transition-all transform translate-y-10 opacity-0';
+    toast.innerHTML = `
+        <div class="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full text-blue-600">
+            <i class="fa-solid fa-bell"></i>
+        </div>
+        <div class="flex-1">
+            <div class="text-sm font-bold text-gray-900 dark:text-white">${title}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">${message}</div>
+        </div>
+        <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.classList.remove('translate-y-10', 'opacity-0'); }, 100);
+    setTimeout(() => { 
+        toast.classList.add('translate-y-10', 'opacity-0');
+        setTimeout(() => toast.remove(), 500);
+    }, 10000);
+}
+
+async function updateNotifCount() {
+    const badge = document.querySelector('.notif-badge');
+    if (badge) {
+        let count = parseInt(badge.textContent) || 0;
+        badge.textContent = count + 1;
+        badge.classList.remove('hidden');
+    }
+}
+</script>
+<script>
+// -- SUPABASE --
+const supabaseEnabled = <?= env('SUPABASE_ENABLED', false) ? 'true' : 'false' ?>;
+let supabase = null;
+
+if (supabaseEnabled) {
+    const supabaseUrl = '<?= env('SUPABASE_URL') ?>';
+    const supabaseKey = '<?= env('SUPABASE_ANON_KEY') ?>';
+    if (supabaseUrl && supabaseKey) {
+        // Fix for supabasejs not being defined if script loads late
+        if (typeof supabasejs !== 'undefined') {
+            supabase = supabasejs.createClient(supabaseUrl, supabaseKey);
+            console.log('Supabase Realtime Initialized');
+
+            // Example: Real-time listener for Support Tickets
+            supabase
+                .channel('public:support_tickets')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'support_tickets' }, payload => {
+                    console.log('New Ticket Received:', payload.new);
+                    showNotification('New Support Ticket', `Ticket #${payload.new.id}: ${payload.new.subject}`);
+                    if (typeof updateNotifCount === 'function') updateNotifCount();
+                })
+                .subscribe();
+        } else {
+            console.error('Supabase library not loaded');
+        }
+    }
+}
+
+function showNotification(title, message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-white dark:bg-zinc-900 border-l-4 border-blue-600 shadow-xl p-4 rounded-lg flex items-start gap-4 z-[9999] transition-all transform translate-y-10 opacity-0';
+    toast.innerHTML = `
+        <div class="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-full text-blue-600">
+            <i class="fa-solid fa-bell"></i>
+        </div>
+        <div class="flex-1">
+            <div class="text-sm font-bold text-gray-900 dark:text-white">${title}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">${message}</div>
+        </div>
+        <button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark"></i></button>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.classList.remove('translate-y-10', 'opacity-0'); }, 100);
+    setTimeout(() => { 
+        toast.classList.add('translate-y-10', 'opacity-0');
+        setTimeout(() => toast.remove(), 500);
+    }, 10000);
+}
+
+async function updateNotifCount() {
+    const badge = document.querySelector('.notif-badge');
+    if (badge) {
+        let count = parseInt(badge.textContent) || 0;
+        badge.textContent = count + 1;
+        badge.classList.remove('hidden');
+    }
+}
 </script>
 </body>
 </html>

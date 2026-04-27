@@ -1,5 +1,5 @@
 /**
- * Digital ISP WhatsApp Bot
+ * FCNCHBD ISP WhatsApp Bot
  * ─────────────────────────────────────────────────────────────
  * Commands (in ISP groups or direct message):
  *   !bill <phone>     — check customer bill
@@ -21,7 +21,7 @@ const axios  = require('axios');
 const ISP_URL      = 'http://localhost/ispd/public';
 const ISP_USER     = 'admin';
 const ISP_PASS     = 'Admin@1234';
-const ISP_GROUPS   = ['isp', 'digital isp', 'customers', 'support'];  // lowercase partial match
+const ISP_GROUPS   = ['isp', 'FCNCHBD ISP', 'customers', 'support'];  // lowercase partial match
 const ADMIN_NUMBER = '8801XXXXXXXXX@c.us';  // your number — gets all alerts
 
 // ── ISP API ───────────────────────────────────────────────────
@@ -157,7 +157,7 @@ function handleHelp() {
            `!status <phone>       — Customer status\n` +
            `!help                 — This menu\n` +
            `━━━━━━━━━━━━━━━━━━\n` +
-           `Powered by Digital ISP ERP`;
+           `Powered by FCNCHBD ISP ERP`;
 }
 
 // ── WhatsApp Client ───────────────────────────────────────────

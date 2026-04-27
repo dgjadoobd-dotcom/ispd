@@ -1,7 +1,7 @@
 # Feature Updates Guidelines
 
 ## 1. Purpose
-This document defines a standard process for implementing feature updates in Digital ISP ERP with predictable quality, low regression risk, and clear release communication.
+This document defines a standard process for implementing feature updates in FCNCHBD ISP ERP with predictable quality, low regression risk, and clear release communication.
 
 ## 2. Scope
 Use these guidelines for:

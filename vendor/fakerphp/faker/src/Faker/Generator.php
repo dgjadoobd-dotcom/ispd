@@ -57,6 +57,65 @@ use Faker\Container\ContainerInterface;
  *
  * @method int randomDigitNotNull()
  *
+ * @prope<?php
+
+namespace Faker;
+
+use Faker\Container\ContainerInterface;
+
+/**
+ * @property string $citySuffix
+ *
+ * @method string citySuffix()
+ *
+ * @property string $streetSuffix
+ *
+ * @method string streetSuffix()
+ *
+ * @property string $buildingNumber
+ *
+ * @method string buildingNumber()
+ *
+ * @property string $city
+ *
+ * @method string city()
+ *
+ * @property string $streetName
+ *
+ * @method string streetName()
+ *
+ * @property string $streetAddress
+ *
+ * @method string streetAddress()
+ *
+ * @property string $postcode
+ *
+ * @method string postcode()
+ *
+ * @property string $address
+ *
+ * @method string address()
+ *
+ * @property string $country
+ *
+ * @method string country()
+ *
+ * @property float $latitude
+ *
+ * @method float latitude($min = -90, $max = 90)
+ *
+ * @property float $longitude
+ *
+ * @method float longitude($min = -180, $max = 180)
+ *
+ * @property float[] $localCoordinates
+ *
+ * @method float[] localCoordinates()
+ *
+ * @property int $randomDigitNotNull
+ *
+ * @method int randomDigitNotNull()
+ *
  * @property mixed $passthrough
  *
  * @method mixed passthrough($value)
@@ -928,7 +987,7 @@ class Generator
     }
 
     /**
-     * Get a version number in semantic versioning syntax 2.0.0. (https://semver.org/spec/v2.0.0.html)
+     * Get a version number in semantic versioning syntax 2.0.0. (https://semver.org/spec/v3.0.0.html)
      *
      * @param bool $preRelease Pre release parts may be randomly included
      * @param bool $build      Build parts may be randomly included

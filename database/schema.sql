@@ -1,5 +1,5 @@
 -- ============================================================
--- Digital ISP ERP — Full MySQL Database Schema
+-- FCNCHBD ISP ERP — Full MySQL Database Schema
 -- Bangladesh ISP ERP System
 -- Version: 1.0.1 | Timezone: Asia/Dhaka
 -- ============================================================
@@ -912,17 +912,17 @@ VALUES
 -- SMS Templates
 INSERT IGNORE INTO sms_templates (name, event_type, message_bn, message_en) VALUES
 ('Bill Generated', 'bill_generated',
- 'প্রিয় {name}, আপনার {month} মাসের বিল {amount} টাকা তৈরি হয়েছে। পরিশোধের শেষ তারিখ: {due_date}। Digital ISP ERP',
- 'Dear {name}, Your {month} bill of {amount} BDT is generated. Due date: {due_date}. Digital ISP ERP'),
+ 'প্রিয় {name}, আপনার {month} মাসের বিল {amount} টাকা তৈরি হয়েছে। পরিশোধের শেষ তারিখ: {due_date}। FCNCHBD ISP ERP',
+ 'Dear {name}, Your {month} bill of {amount} BDT is generated. Due date: {due_date}. FCNCHBD ISP ERP'),
 ('Payment Received', 'payment_received',
- 'প্রিয় {name}, আপনার {amount} টাকা পেমেন্ট গ্রহণ করা হয়েছে। রসিদ নং: {receipt}। ধন্যবাদ, Digital ISP ERP',
- 'Dear {name}, Payment of {amount} BDT received. Receipt: {receipt}. Thank you, Digital ISP ERP'),
+ 'প্রিয় {name}, আপনার {amount} টাকা পেমেন্ট গ্রহণ করা হয়েছে। রসিদ নং: {receipt}। ধন্যবাদ, FCNCHBD ISP ERP',
+ 'Dear {name}, Payment of {amount} BDT received. Receipt: {receipt}. Thank you, FCNCHBD ISP ERP'),
 ('Due Reminder', 'due_reminder',
- 'প্রিয় {name}, আপনার {amount} টাকা বিল বকেয়া আছে। এখনই পরিশোধ করুন। Digital ISP ERP',
- 'Dear {name}, Bill of {amount} BDT is overdue. Please pay now. Digital ISP ERP'),
+ 'প্রিয় {name}, আপনার {amount} টাকা বিল বকেয়া আছে। এখনই পরিশোধ করুন। FCNCHBD ISP ERP',
+ 'Dear {name}, Bill of {amount} BDT is overdue. Please pay now. FCNCHBD ISP ERP'),
 ('Welcome', 'welcome',
- 'প্রিয় {name}, Digital ISP ERP-এ স্বাগতম! আপনার সংযোগ সক্রিয় হয়েছে। ব্যবহারকারী: {username}। Digital ISP ERP',
- 'Dear {name}, Welcome to Digital ISP ERP! Your connection is active. Username: {username}. Digital ISP ERP');
+ 'প্রিয় {name}, FCNCHBD ISP ERP-এ স্বাগতম! আপনার সংযোগ সক্রিয় হয়েছে। ব্যবহারকারী: {username}। FCNCHBD ISP ERP',
+ 'Dear {name}, Welcome to FCNCHBD ISP ERP! Your connection is active. Username: {username}. FCNCHBD ISP ERP');
 
 -- Permissions
 INSERT IGNORE INTO permissions (name, module, description) VALUES

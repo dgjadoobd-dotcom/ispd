@@ -2,7 +2,7 @@
 
 ## Overview
 
-This plan converts the design into discrete, incremental coding tasks that bring the Digital ISP ERP system to full Ubuntu 24.04 LTS compatibility. Tasks are ordered so each step builds on the previous one, with shared shell helper functions established first and then consumed by higher-level scripts. All shell work targets Bash; PHP tests use PHPUnit with data providers; shell script tests use Bats (Bash Automated Testing System).
+This plan converts the design into discrete, incremental coding tasks that bring the FCNCHBD ISP ERP system to full Ubuntu 24.04 LTS compatibility. Tasks are ordered so each step builds on the previous one, with shared shell helper functions established first and then consumed by higher-level scripts. All shell work targets Bash; PHP tests use PHPUnit with data providers; shell script tests use Bats (Bash Automated Testing System).
 
 ## Tasks
 

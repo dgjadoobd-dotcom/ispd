@@ -1,7 +1,7 @@
 {
-  "name": "digital-isp-whatsapp-bot",
-  "version": "1.0.0",
-  "description": "WhatsApp bot for Digital ISP ERP",
+  "name": "fcnchbd-whatsapp-bot",
+  "version": "3.0.0",
+  "description": "WhatsApp bot for FCNCHBD ISP ERP",
   "main": "whatsapp_bot.js",
   "scripts": {
     "start": "node whatsapp_bot.js",

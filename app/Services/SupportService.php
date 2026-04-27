@@ -219,7 +219,11 @@ class SupportService extends BaseService
             $duplicateWarning = $this->checkDuplicateTicket((int)$data['customer_id'], $data['subject'] ?? '');
         }
 
+        // Generate unique ticket number
+        $ticketNumber = 'TKT-' . date('Ymd') . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+
         $ticketId = $this->create('support_tickets', [
+            'ticket_number'    => $ticketNumber,
             'customer_id'      => (int)($data['customer_id'] ?? 0) ?: null,
             'branch_id'        => (int)($data['branch_id']   ?? 0) ?: null,
             'subject'          => $data['subject']      ?? '',

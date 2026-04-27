@@ -1,5 +1,5 @@
 -- ============================================================
--- Digital ISP ERP — Full MySQL Database Schema
+-- FCNCHBD ISP ERP — Full MySQL Database Schema
 -- Bangladesh ISP ERP System
 -- Version: 1.0.0 | Timezone: Asia/Dhaka
 -- ============================================================
@@ -389,6 +389,17 @@ CREATE TABLE IF NOT EXISTS radius_users (
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS radius_alerts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    level VARCHAR(20) DEFAULT 'info',
+    message TEXT NOT NULL,
+    module VARCHAR(50),
+    record_id INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uniq_username ON radius_users (username);
+
 -- ============================================================
 -- MAC BINDING / CALLERID MANAGEMENT
 -- ============================================================
@@ -698,6 +709,7 @@ CREATE TABLE IF NOT EXISTS resellers (
     balance DECIMAL(12,2) DEFAULT 0.00,
     credit_limit DECIMAL(12,2) DEFAULT 0.00,
     status TEXT DEFAULT 'active',
+    is_active INTEGER DEFAULT 1,
     joined_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
@@ -998,6 +1010,7 @@ CREATE TABLE IF NOT EXISTS activity_logs (
     new_values TEXT ,
     ip_address VARCHAR(45),
     user_agent VARCHAR(255),
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -1056,17 +1069,17 @@ VALUES
 -- SMS Templates
 INSERT OR IGNORE INTO sms_templates (name, event_type, message_bn, message_en) VALUES
 ('Bill Generated', 'bill_generated',
- 'প্রিয় {name}, আপনার {month} মাসের বিল {amount} টাকা তৈরি হয়েছে। পরিশোধের শেষ তারিখ: {due_date}। Digital ISP ERP',
- 'Dear {name}, Your {month} bill of {amount} BDT is generated. Due date: {due_date}. Digital ISP ERP'),
+ 'প্রিয় {name}, আপনার {month} মাসের বিল {amount} টাকা তৈরি হয়েছে। পরিশোধের শেষ তারিখ: {due_date}। FCNCHBD ISP ERP',
+ 'Dear {name}, Your {month} bill of {amount} BDT is generated. Due date: {due_date}. FCNCHBD ISP ERP'),
 ('Payment Received', 'payment_received',
- 'প্রিয় {name}, আপনার {amount} টাকা পেমেন্ট গ্রহণ করা হয়েছে। রসিদ নং: {receipt}। ধন্যবাদ, Digital ISP ERP',
- 'Dear {name}, Payment of {amount} BDT received. Receipt: {receipt}. Thank you, Digital ISP ERP'),
+ 'প্রিয় {name}, আপনার {amount} টাকা পেমেন্ট গ্রহণ করা হয়েছে। রসিদ নং: {receipt}। ধন্যবাদ, FCNCHBD ISP ERP',
+ 'Dear {name}, Payment of {amount} BDT received. Receipt: {receipt}. Thank you, FCNCHBD ISP ERP'),
 ('Due Reminder', 'due_reminder',
- 'প্রিয় {name}, আপনার {amount} টাকা বিল বকেয়া আছে। এখনই পরিশোধ করুন। Digital ISP ERP',
- 'Dear {name}, Bill of {amount} BDT is overdue. Please pay now. Digital ISP ERP'),
+ 'প্রিয় {name}, আপনার {amount} টাকা বিল বকেয়া আছে। এখনই পরিশোধ করুন। FCNCHBD ISP ERP',
+ 'Dear {name}, Bill of {amount} BDT is overdue. Please pay now. FCNCHBD ISP ERP'),
 ('Welcome', 'welcome',
- 'প্রিয় {name}, Digital ISP ERP-এ স্বাগতম! আপনার সংযোগ সক্রিয় হয়েছে। ব্যবহারকারী: {username}। Digital ISP ERP',
- 'Dear {name}, Welcome to Digital ISP ERP! Your connection is active. Username: {username}. Digital ISP ERP');
+ 'প্রিয় {name}, FCNCHBD ISP ERP-এ স্বাগতম! আপনার সংযোগ সক্রিয় হয়েছে। ব্যবহারকারী: {username}। FCNCHBD ISP ERP',
+ 'Dear {name}, Welcome to FCNCHBD ISP ERP! Your connection is active. Username: {username}. FCNCHBD ISP ERP');
 
 -- Permissions
 INSERT OR IGNORE INTO permissions (name, module, description) VALUES
@@ -1109,7 +1122,7 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 INSERT OR IGNORE INTO settings (`key`, `value`) VALUES 
-('company_name', 'Digital ISP ERP'),
+('company_name', 'FCNCHBD ISP ERP'),
 ('currency', 'BDT'),
 ('vat_percent', '0');
 

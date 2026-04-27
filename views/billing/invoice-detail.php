@@ -53,7 +53,7 @@
         <div class="card" style="padding:40px;position:relative;overflow:hidden;background:#fff;color:#1e293b;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,0.1);">
             <div style="display:flex;justify-content:space-between;margin-bottom:40px;">
                 <div>
-                    <div style="font-size:24px;font-weight:900;color:var(--blue);letter-spacing:-1px;">DIGITAL ISP ERP</div>
+                    <div style="font-size:24px;font-weight:900;color:var(--blue);letter-spacing:-1px;">FCNCHBD ISP ERP</div>
                     <div style="font-size:12px;color:#64748b;margin-top:4px;">Enterprise ISP & Billing Mgmt</div>
                 </div>
                 <div style="text-align:right;">
@@ -125,7 +125,7 @@
             </div>
 
             <div style="margin-top:60px;border-top:1px solid #f1f5f9;padding-top:20px;text-align:center;font-size:11px;color:#94a3b8;">
-                Thank you for choosing Digital ISP ERP. This is a computer generated invoice.
+                Thank you for choosing FCNCHBD ISP ERP. This is a computer generated invoice.
             </div>
         </div>
 

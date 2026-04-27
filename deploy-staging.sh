@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# Digital ISP ERP — Staging Deploy Script
+# FCNCHBD ISP ERP — Staging Deploy Script
 # Usage: bash deploy-staging.sh
 # Requires: .env.staging configured with real staging credentials
 # ============================================================
@@ -19,7 +19,7 @@ NC='\033[0m'
 
 header() { echo -e "\n${BLUE}══════════════════════════════════════${NC}"; echo -e "${BLUE}  $1${NC}"; echo -e "${BLUE}══════════════════════════════════════${NC}"; }
 
-header "Digital ISP ERP — Staging Deploy"
+header "FCNCHBD ISP ERP — Staging Deploy"
 
 # ── OS Detection ──────────────────────────────────────────────
 if [ -f /etc/os-release ]; then

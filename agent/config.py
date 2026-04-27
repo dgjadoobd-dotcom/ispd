@@ -1,5 +1,5 @@
 # ============================================================
-# Digital ISP Personal Agent — Configuration
+# FCNCHBD ISP Personal Agent — Configuration
 # Edit these values to match your setup
 # ============================================================
 
@@ -13,7 +13,7 @@ ISP_PASSWORD = "Admin@1234"
 MY_WHATSAPP_NUMBER = "8801XXXXXXXXX"
 
 # Group names to monitor (partial match, case-insensitive)
-ISP_GROUPS = ["ISP", "Digital ISP", "Customers", "Support"]
+ISP_GROUPS = ["ISP", "FCNCHBD ISP", "Customers", "Support"]
 
 # ── Excel ─────────────────────────────────────────────────────
 EXCEL_FILE   = "reports/billing_report.xlsx"

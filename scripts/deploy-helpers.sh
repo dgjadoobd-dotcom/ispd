@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Digital ISP ERP — Shared Deploy Helper Functions
+# FCNCHBD ISP ERP — Shared Deploy Helper Functions
 # =============================================================================
 # This library is sourced by deploy-prod.sh, deploy-staging.sh, and
 # deploy-dev.sh. It provides all reusable shell functions for deployment.

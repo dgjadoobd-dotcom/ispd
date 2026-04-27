@@ -1,6 +1,6 @@
 <?php
 /**
- * Digital ISP ERP — Web Installer
+ * FCNCHBD ISP ERP — Web Installer
  * Supports: XAMPP (Windows) · Shared Hosting · Ubuntu Server
  *
  * Access: http://your-domain/install.php
@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($step === 2) {
         $dbType = $_POST['db_type'] ?? 'sqlite';
         $env = [
-            'APP_NAME'     => trim($_POST['app_name'] ?? 'Digital ISP ERP'),
+            'APP_NAME'     => trim($_POST['app_name'] ?? 'FCNCHBD ISP ERP'),
             'APP_URL'      => rtrim(trim($_POST['app_url'] ?? 'http://localhost:8088'), '/'),
             'APP_ENV'      => 'production',
             'APP_DEBUG'    => 'false',
@@ -237,7 +237,7 @@ $admin   = $_SESSION['install_admin'] ?? [];
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Install — Digital ISP ERP</title>
+<title>Install — FCNCHBD ISP ERP</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -297,7 +297,7 @@ footer{text-align:center;margin-top:20px;color:#334155;font-size:12px}
 <div class="wrap">
   <div class="logo">
     <div class="logo-icon">🌐</div>
-    <h1>Digital ISP ERP</h1>
+    <h1>FCNCHBD ISP ERP</h1>
     <p>Installation Wizard v<?= INSTALLER_VERSION ?></p>
   </div>
 
@@ -361,7 +361,7 @@ footer{text-align:center;margin-top:20px;color:#334155;font-size:12px}
       <div class="row">
         <div class="form-group">
           <label>App Name</label>
-          <input name="app_name" value="Digital ISP ERP" required>
+          <input name="app_name" value="FCNCHBD ISP ERP" required>
         </div>
         <div class="form-group">
           <label>Timezone</label>
@@ -513,7 +513,7 @@ footer{text-align:center;margin-top:20px;color:#334155;font-size:12px}
     <div style="text-align:center">
       <div class="success-icon">✅</div>
       <h2 style="text-align:center;margin-bottom:8px">Installation Complete!</h2>
-      <p style="color:#64748b;font-size:13px;margin-bottom:24px">Digital ISP ERP is ready to use.</p>
+      <p style="color:#64748b;font-size:13px;margin-bottom:24px">FCNCHBD ISP ERP is ready to use.</p>
     </div>
 
     <div class="section-title">Login Credentials</div>
@@ -552,7 +552,7 @@ footer{text-align:center;margin-top:20px;color:#334155;font-size:12px}
     <?php endif; ?>
 
   </div><!-- /card -->
-  <footer>Digital ISP ERP &copy; <?= date('Y') ?> &nbsp;·&nbsp; Installer v<?= INSTALLER_VERSION ?></footer>
+  <footer>FCNCHBD ISP ERP &copy; <?= date('Y') ?> &nbsp;·&nbsp; Installer v<?= INSTALLER_VERSION ?></footer>
 </div>
 
 <script>

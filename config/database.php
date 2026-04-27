@@ -4,6 +4,7 @@ class Database {
     private static $instance = null;
     private $connection;
     private bool $isSqlite = false;
+    private $supabaseService = null;
 
     private function __construct(string $name = 'default') {
         $envFile = BASE_PATH . '/.env';
@@ -83,7 +84,7 @@ class Database {
             return;
         }
 
-        $requiredTables = ['users', 'customers', 'packages', 'nas_devices', 'config_items', 'sms_campaigns', 'automation_logs'];
+        $requiredTables = ['users', 'customers', 'packages', 'nas_devices', 'config_items', 'sms_campaigns', 'automation_logs', 'radius_alerts'];
         $missingTables = [];
 
         foreach ($requiredTables as $table) {
@@ -165,6 +166,12 @@ class Database {
                 "ALTER TABLE support_tickets ADD COLUMN category_id INTEGER NULL",
                 "ALTER TABLE support_tickets ADD COLUMN resolution_notes TEXT NULL",
             ],
+            'activity_logs' => [
+                "ALTER TABLE activity_logs ADD COLUMN description TEXT NULL",
+            ],
+            'resellers' => [
+                "ALTER TABLE resellers ADD COLUMN is_active INTEGER DEFAULT 1",
+            ],
         ];
 
         foreach ($migrations as $table => $statements) {
@@ -200,17 +207,45 @@ class Database {
         $cols = implode(', ', array_map(fn($k) => "`$k`", array_keys($data)));
         $vals = implode(', ', array_fill(0, count($data), '?'));
         $this->query("INSERT INTO `{$table}` ({$cols}) VALUES ({$vals})", array_values($data));
-        return (int)$this->connection->lastInsertId();
+        $id = (int)$this->connection->lastInsertId();
+        
+        // Sync to Supabase
+        $this->syncToSupabase($table, 'insert', array_merge($data, ['id' => $id]), $id);
+        
+        return $id;
     }
 
     public function update(string $table, array $data, string $where, array $whereParams = []): int {
         $set = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($data)));
         $stmt = $this->query("UPDATE `{$table}` SET {$set} WHERE {$where}", [...array_values($data), ...$whereParams]);
-        return $stmt->rowCount();
+        $affected = $stmt->rowCount();
+        
+        // Try to find the ID from where clause for sync
+        $id = null;
+        if (preg_match('/id\s*=\s*\?/', $where)) {
+            $id = end($whereParams);
+        }
+
+        if ($affected > 0) {
+            $this->syncToSupabase($table, 'update', $data, $id);
+        }
+        
+        return $affected;
     }
 
     public function delete(string $table, string $where, array $params = []): int {
-        return $this->query("DELETE FROM {$table} WHERE {$where}", $params)->rowCount();
+        $affected = $this->query("DELETE FROM {$table} WHERE {$where}", $params)->rowCount();
+        
+        $id = null;
+        if (preg_match('/id\s*=\s*\?/', $where)) {
+            $id = end($params);
+        }
+
+        if ($affected > 0) {
+            $this->syncToSupabase($table, 'delete', [], $id);
+        }
+        
+        return $affected;
     }
 
     /**
@@ -222,5 +257,19 @@ class Database {
 
     public function isSqlite(): bool {
         return $this->isSqlite;
+    }
+
+    private function syncToSupabase(string $table, string $action, array $data, $id): void {
+        try {
+            if ($this->supabaseService === null && class_exists('SupabaseService')) {
+                $this->supabaseService = new SupabaseService();
+            }
+            if ($this->supabaseService && $this->supabaseService->isEnabled()) {
+                $this->supabaseService->syncRecord($table, $action, $data, $id);
+            }
+        } catch (\Throwable $e) {
+            // Silently fail sync errors to prevent breaking the main database operation
+            error_log("Supabase sync failed for table $table: " . $e->getMessage());
+        }
     }
 }

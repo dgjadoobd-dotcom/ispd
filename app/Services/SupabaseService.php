@@ -179,4 +179,34 @@ class SupabaseService {
     public function isEnabled(): bool {
         return $this->enabled;
     }
+
+    /**
+     * Sync a record change to Supabase
+     * 
+     * @param string $table The table name
+     * @param string $action The action: 'insert', 'update', 'delete'
+     * @param array $data The data to sync (optional for delete)
+     * @param mixed $id The record ID (required for update/delete)
+     * @return bool
+     */
+    public function syncRecord(string $table, string $action, array $data = [], $id = null): bool {
+        if (!$this->enabled) return false;
+
+        // Skip tables we don't want to sync to Supabase
+        $blacklist = ['sessions', 'migrations', 'automation_logs'];
+        if (in_array($table, $blacklist)) return false;
+
+        switch ($action) {
+            case 'insert':
+                return $this->insert($table, $data);
+            case 'update':
+                if ($id === null) return false;
+                return $this->update($table, (int)$id, $data);
+            case 'delete':
+                if ($id === null) return false;
+                return $this->delete($table, (int)$id);
+            default:
+                return false;
+        }
+    }
 }

@@ -1,7 +1,7 @@
 # Tasks: RADIUS Service Enhancement
 
 ## Project Overview
-This document outlines the implementation tasks for enhancing the RADIUS service in the Digital ISP ERP system. The enhancement focuses on improving user management, session management, accounting, security, and monitoring capabilities.
+This document outlines the implementation tasks for enhancing the RADIUS service in the FCNCHBD ISP ERP system. The enhancement focuses on improving user management, session management, accounting, security, and monitoring capabilities.
 
 ## Task List
 

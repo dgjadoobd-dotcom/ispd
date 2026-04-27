@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * SuperAdminController
  * Handles login, user management, logs, settings, branches, and NOC for the super-admin panel.
@@ -42,11 +42,11 @@ class SuperAdminController
             [$username]
         );
 
-        if (!$user || !password_verify($password, $user['password'])) {
+        if (!$user || !password_verify($password, $user['password_hash'])) {
             $_SESSION['sa_login_error'] = 'Invalid credentials.';
             $this->db->execute(
-                "INSERT INTO activity_logs (user_id, action, description, ip_address, created_at)
-                 VALUES (0, 'sa_login_fail', ?, ?, datetime('now'))",
+                "INSERT INTO activity_logs (user_id, action, module, description, ip_address, created_at)
+                 VALUES (0, 'sa_login_fail', 'SuperAdmin', ?, ?, datetime('now'))",
                 ["Failed super-admin login attempt for: {$username}", $_SERVER['REMOTE_ADDR'] ?? '']
             );
             redirect(base_url('superadmin/login'));
@@ -70,8 +70,8 @@ class SuperAdminController
         $_SESSION['branch_id']     = $user['branch_id'] ?? null;
 
         $this->db->execute(
-            "INSERT INTO activity_logs (user_id, action, description, ip_address, created_at)
-             VALUES (?, 'sa_login', 'Super admin login', ?, datetime('now'))",
+            "INSERT INTO activity_logs (user_id, action, module, description, ip_address, created_at)
+             VALUES (?, 'sa_login', 'SuperAdmin', 'Super admin login', ?, datetime('now'))",
             [$user['id'], $_SERVER['REMOTE_ADDR'] ?? '']
         );
 
@@ -82,8 +82,8 @@ class SuperAdminController
     {
         if (isset($_SESSION['user_id'])) {
             $this->db->execute(
-                "INSERT INTO activity_logs (user_id, action, description, ip_address, created_at)
-                 VALUES (?, 'sa_logout', 'Super admin logout', ?, datetime('now'))",
+                "INSERT INTO activity_logs (user_id, action, module, description, ip_address, created_at)
+                 VALUES (?, 'sa_logout', 'SuperAdmin', 'Super admin logout', ?, datetime('now'))",
                 [$_SESSION['user_id'], $_SERVER['REMOTE_ADDR'] ?? '']
             );
         }
@@ -431,8 +431,8 @@ class SuperAdminController
     private function logAction(string $action, string $description): void
     {
         $this->db->execute(
-            "INSERT INTO activity_logs (user_id, action, description, ip_address, created_at)
-             VALUES (?, ?, ?, ?, datetime('now'))",
+            "INSERT INTO activity_logs (user_id, action, module, description, ip_address, created_at)
+             VALUES (?, ?, 'SuperAdmin', ?, ?, datetime('now'))",
             [$_SESSION['user_id'] ?? 0, $action, $description, $_SERVER['REMOTE_ADDR'] ?? '']
         );
     }

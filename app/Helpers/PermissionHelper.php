@@ -4,7 +4,7 @@
  * PermissionHelper — static utility class for role-based access control.
  *
  * Provides permission checks, branch data isolation, and session-based
- * user context helpers for all 20 modules in the Digital ISP ERP system.
+ * user context helpers for all 20 modules in the FCNCHBD ISP ERP system.
  *
  * Permissions follow the format: `module.action`
  * e.g. `hr.view`, `hr.edit`, `billing.delete`

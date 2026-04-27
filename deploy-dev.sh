@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# Digital ISP ERP — Development Deploy Script
+# FCNCHBD ISP ERP — Development Deploy Script
 # Usage: bash deploy-dev.sh
 # ============================================================
 
@@ -18,7 +18,7 @@ NC='\033[0m'
 
 header() { echo -e "\n${BLUE}══════════════════════════════════════${NC}"; echo -e "${BLUE}  $1${NC}"; echo -e "${BLUE}══════════════════════════════════════${NC}"; }
 
-header "Digital ISP ERP — Development Deploy"
+header "FCNCHBD ISP ERP — Development Deploy"
 
 # ── OS Detection ──────────────────────────────────────────────
 if [ -f /etc/os-release ]; then

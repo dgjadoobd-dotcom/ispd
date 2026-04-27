@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document defines requirements for implementing 20 missing modules in the Digital ISP ERP system — a PHP 8+ MVC application (no framework, custom router) using SQLite/MySQL, Tailwind CSS views, and an existing `Database` class with `fetchOne`/`fetchAll`/`insert`/`update`/`delete` methods. The system already has Customer Management, Billing, MikroTik/RADIUS integration, Customer Portal, SMS, Automation, Payment Gateway, Dashboard, OLT/ONU, Webhooks, AI, MFA, IP Access Control, Rate Limiting, Audit Logging, and Bulk Operations.
+This document defines requirements for implementing 20 missing modules in the FCNCHBD ISP ERP system — a PHP 8+ MVC application (no framework, custom router) using SQLite/MySQL, Tailwind CSS views, and an existing `Database` class with `fetchOne`/`fetchAll`/`insert`/`update`/`delete` methods. The system already has Customer Management, Billing, MikroTik/RADIUS integration, Customer Portal, SMS, Automation, Payment Gateway, Dashboard, OLT/ONU, Webhooks, AI, MFA, IP Access Control, Rate Limiting, Audit Logging, and Bulk Operations.
 
 The 20 modules below extend the system to cover branch management, HR, support, tasks, sales, purchasing, inventory, network diagrams, accounting, assets, bandwidth reselling, portals, employee tools, regulatory reporting, OTT, configuration, RBAC UI, bulk communications, and a mobile API.
 
@@ -10,7 +10,7 @@ The 20 modules below extend the system to cover branch management, HR, support, 
 
 ## Glossary
 
-- **System**: The Digital ISP ERP application
+- **System**: The FCNCHBD ISP ERP application
 - **Branch**: A physical office or operational unit of the ISP
 - **ComAdmin**: Company-level administrator role with access to all branches
 - **BranchAdmin**: Branch-level administrator restricted to their own branch data
@@ -28,7 +28,7 @@ The 20 modules below extend the system to cover branch management, HR, support, 
 - **Ledger**: A running account balance record for a reseller or vendor
 - **OTT**: Over-The-Top streaming service subscription bundled with internet packages
 - **BTRC**: Bangladesh Telecommunication Regulatory Commission
-- **DIS**: BTRC's Digital ISP reporting format
+- **DIS**: BTRC's FCNCHBD ISP reporting format
 - **Permission**: A named capability (e.g., `billing.view`, `customers.edit`) that can be granted to a role
 - **Role**: A named collection of permissions assigned to users
 - **Campaign**: A bulk SMS or email broadcast targeting a filtered set of recipients
